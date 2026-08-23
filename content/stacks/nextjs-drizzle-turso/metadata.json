@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Drizzle + Turso",
+  "slug": "nextjs-drizzle-turso",
+  "description": "El stack moderno y ligero para SaaS. Type-safe de extremo a extremo con Drizzle ORM y Turso (SQLite Edge).",
+  "difficulty": "Intermedio",
+  "icon": "⚡",
+  "tags": ["Next.js", "TypeScript", "SQLite", "Drizzle", "Tailwind"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Better Auth",
+  "slug": "nextjs-better-auth",
+  "description": "Una biblioteca de autenticación moderna, extensible y de código abierto. Alternativa ligera a NextAuth.js con soporte para múltiples bases de datos y plugins.",
+  "difficulty": "Intermedio",
+  "icon": "✨",
+  "tags": ["Next.js", "BetterAuth", "TypeScript", "Modern"]
+}

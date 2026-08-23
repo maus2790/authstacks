@@ -1,0 +1,9 @@
+[
+  { "slug": "01-inicio", "title": "Inicio - Instalación", "order": 1 },
+  { "slug": "02-configuracion", "title": "Configuración de Drizzle y Turso", "order": 2 },
+  { "slug": "03-base-datos", "title": "Esquema y Migraciones", "order": 3 },
+  { "slug": "04-logica-backend", "title": "Lógica de Autenticación", "order": 4 },
+  { "slug": "05-frontend", "title": "Componentes UI y Páginas", "order": 5 },
+  { "slug": "06-dashboard-extra", "title": "Dashboard, Perfil y Middleware", "order": 6 },
+  { "slug": "07-google-login", "title": "Login con Google (OAuth)", "order": 7 }
+]

@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Lucia Auth",
+  "slug": "nextjs-lucia",
+  "description": "Una biblioteca de autenticación minimalista y moderna que te da control total sobre tu base de datos y flujos de autenticación.",
+  "difficulty": "Intermedio",
+  "icon": "🦋",
+  "tags": ["Next.js", "Lucia", "TypeScript", "Database-agnostic"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Firebase",
+  "slug": "nextjs-firebase",
+  "description": "La plataforma completa de Google para desarrollar apps. Incluye autenticación, base de datos en tiempo real, almacenamiento y más, todo integrado con Next.js.",
+  "difficulty": "Intermedio",
+  "icon": "🔥",
+  "tags": ["Next.js", "Firebase", "Authentication", "Firestore", "Tailwind"]
+}

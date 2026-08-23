@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Supabase",
+  "slug": "nextjs-supabase",
+  "description": "La forma más rápida de implementar auth completa con Backend as a Service (BaaS). Incluye Auth, DB y Storage listos para usar.",
+  "difficulty": "Principiante",
+  "icon": "🟢",
+  "tags": ["Next.js", "Supabase", "PostgreSQL", "Tailwind"]
+}

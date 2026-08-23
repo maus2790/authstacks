@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + MongoDB",
+  "slug": "nextjs-mongodb",
+  "description": "Autenticación completa con MongoDB como base de datos, utilizando Mongoose ODM, sesiones JWT y cookies HTTP-only.",
+  "difficulty": "Intermedio",
+  "icon": "🍃",
+  "tags": ["Next.js", "MongoDB", "Mongoose", "JWT", "Tailwind"]
+}

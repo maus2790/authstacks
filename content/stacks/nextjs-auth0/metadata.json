@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Auth0",
+  "slug": "nextjs-auth0",
+  "description": "La plataforma de autenticación líder para empresas. Incluye SSO, MFA, gestión de usuarios y cumplimiento de estándares de seguridad.",
+  "difficulty": "Intermedio",
+  "icon": "🏢",
+  "tags": ["Next.js", "Auth0", "Enterprise", "SSO"]
+}

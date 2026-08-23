@@ -1,0 +1,8 @@
+{
+  "name": "Next.js + Clerk",
+  "slug": "nextjs-clerk",
+  "description": "La forma más rápida de añadir autenticación completa a Next.js. Incluye UI pre-construida, manejo de sesiones, MFA y más.",
+  "difficulty": "Principiante",
+  "icon": "👤",
+  "tags": ["Next.js", "Clerk", "Auth-as-Service", "Tailwind"]
+}
