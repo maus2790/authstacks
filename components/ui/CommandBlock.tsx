@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { Check, Copy, Terminal } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
+import dracula from 'react-syntax-highlighter/dist/esm/styles/prism/dracula';
 import { cn } from '@/lib/utils';
+
+SyntaxHighlighter.registerLanguage('bash', bash);
 
 interface CommandBlockProps {
   command: string;

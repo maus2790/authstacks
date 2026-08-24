@@ -1,10 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { cache } from "react";
 import { Stack, StackMetadata, StepMetadata } from "@/types";
+import { stepComponents } from "@/lib/step-components";
 
 const STACKS_DIR = path.join(process.cwd(), "content", "stacks");
 
-export function getAllStacks(): Stack[] {
+export const getAllStacks = cache((): Stack[] => {
   if (!fs.existsSync(STACKS_DIR)) return [];
 
   const stackNames = fs.readdirSync(STACKS_DIR).filter((item) => {
@@ -47,7 +49,7 @@ export function getAllStacks(): Stack[] {
   }
 
   return stacks;
-}
+});
 
 export function getStackBySlug(slug: string): Stack | null {
   const all = getAllStacks();
@@ -55,10 +57,10 @@ export function getStackBySlug(slug: string): Stack | null {
 }
 
 export async function getStepComponent(stackSlug: string, stepSlug: string) {
-  const stepPath = path.join(STACKS_DIR, stackSlug, `${stepSlug}.tsx`);
-  if (!fs.existsSync(stepPath)) {
+  const loader = stepComponents[stackSlug]?.[stepSlug];
+  if (!loader) {
     throw new Error(`Step ${stepSlug} not found in stack ${stackSlug}`);
   }
-  const stepModule = await import(`@/content/stacks/${stackSlug}/${stepSlug}`);
-  return stepModule.default;
+  const module = await loader();
+  return module.default;
 }

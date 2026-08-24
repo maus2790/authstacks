@@ -1,8 +1,16 @@
 import { notFound } from "next/navigation";
-import { getStackBySlug, getStepComponent } from "@/lib/content";
+import { getAllStacks, getStackBySlug, getStepComponent } from "@/lib/content";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { StepNavigation } from "@/components/ui/StepNavigation";
 import { StepLayout } from "@/components/ui/StepLayout";
+
+export function generateStaticParams() {
+  return getAllStacks().flatMap((stack) =>
+    stack.steps.map((step) => ({ slug: stack.metadata.slug, step: step.slug }))
+  );
+}
+
+export const dynamicParams = false;
 
 export default async function StepPage({ params }: { params: Promise<{ slug: string; step: string }> }) {
   const { slug, step: stepSlug } = await params;

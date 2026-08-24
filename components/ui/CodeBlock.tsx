@@ -2,10 +2,18 @@
 
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
+import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
+import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
+import vs from 'react-syntax-highlighter/dist/esm/styles/prism/vs';
 import { useTheme } from '@/lib/theme-provider';
 import { cn } from '@/lib/utils';
+
+// Registrar solo los lenguajes que usa el contenido (typescript y bash).
+// Los lenguajes de refractor registran sus dependencias automáticamente.
+SyntaxHighlighter.registerLanguage('typescript', typescript);
+SyntaxHighlighter.registerLanguage('bash', bash);
 
 interface CodeBlockProps {
   code: string;

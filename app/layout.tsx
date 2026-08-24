@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: "Elige tu stack y obtén guías paso a paso para implementar autenticación completa",
 };
 
+// Aplica el tema antes de que React hidrate: evita el parpadeo de tema (FOUC)
+// y hace coherente el estado inicial con el script del ThemeProvider.
+const themeInitScript = `(function(){try{var s=localStorage.getItem('theme');var t=(s==='light'||s==='dark')?s:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark');}catch(e){document.documentElement.classList.add('dark');}})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -16,6 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <ThemeProvider>
           <Header />

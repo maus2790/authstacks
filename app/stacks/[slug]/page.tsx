@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getStackBySlug } from "@/lib/content";
+import { getAllStacks, getStackBySlug } from "@/lib/content";
 import { Badge } from "@/components/ui/Badge";
 import { ChevronRight, Clock, Layers } from "lucide-react";
+
+export function generateStaticParams() {
+  return getAllStacks().map((stack) => ({ slug: stack.metadata.slug }));
+}
+
+export const dynamicParams = false;
 
 export default async function StackPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
