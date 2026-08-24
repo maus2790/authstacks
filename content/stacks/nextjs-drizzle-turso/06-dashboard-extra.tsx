@@ -98,9 +98,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";`}
         />
-        <h3 className="subsection-title">10.2. <code>app/components/ui/Input.tsx</code></h3>
-        <CodeBlock
-          code={`"use client";
+<h3 className="subsection-title">
+  10.2. <code>app/components/ui/Input.tsx</code>
+</h3>
+
+<CodeBlock
+  code={`"use client";
 
 import { forwardRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -125,40 +128,91 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
+
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
+            <div
+              className={cn(
+                "absolute left-3 top-1/2 z-10 -translate-y-1/2",
+                "text-white/50 pointer-events-none"
+              )}
+            >
               {icon}
             </div>
           )}
+
           <input
-            type={isPassword ? (showPassword ? "text" : "password") : type}
+            type={
+              isPassword
+                ? showPassword
+                  ? "text"
+                  : "password"
+                : type
+            }
             className={cn(
-              "w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition",
+              "w-full rounded-lg border border-white/20",
+              "bg-white/10 px-4 py-2",
+              "text-white placeholder-white/50",
+              "focus:outline-none focus:ring-2 focus:ring-white/50",
+              "transition",
+
+              // Espacio para el icono izquierdo
               icon && "pl-10",
-              error && "border-red-500 focus:ring-red-500",
+
+              // Espacio para el botón de contraseña
+              isPassword && "pr-12",
+
+              // Estado de error
+              error &&
+                "border-red-500 focus:ring-red-500",
+
+              // Autofill del navegador
+              "[&:-webkit-autofill]:[-webkit-text-fill-color:white]",
+              "[&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s]",
+
               className
             )}
             ref={ref}
             {...props}
           />
-          {isPassword && (
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          )}
+
+{isPassword && (
+  <button
+    type="button"
+    aria-label={
+      showPassword
+        ? "Ocultar contraseña"
+        : "Mostrar contraseña"
+    }
+    className="absolute right-3 top-1/2 z-20 -translate-y-1/2
+               border-0 bg-transparent p-0
+               text-white/60
+               hover:bg-transparent hover:text-white
+               focus:bg-transparent focus:outline-none
+               focus:ring-0"
+    onClick={() => setShowPassword(!showPassword)}
+  >
+    {showPassword ? (
+      <EyeOff size={18} />
+    ) : (
+      <Eye size={18} />
+    )}
+  </button>
+)}
         </div>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        {error && (
+          <p className="text-sm text-red-400">
+            {error}
+          </p>
+        )}
       </div>
     );
   }
 );
+
 Input.displayName = "Input";`}
-        />
+ />
         <h3 className="subsection-title">10.3. <code>app/components/ui/Card.tsx</code></h3>
         <CodeBlock
           code={`"use client";

@@ -60,18 +60,25 @@ export function checkRateLimit(identifier: string): {
         </div>
 
 
-        <h3 className="subsection-title">7.2. <code>app/actions/auth.ts</code> (COMPLETO)</h3>
-        <p className="section-paragraph">
-          Este archivo contiene todas las Server Actions. Cada función está documentada con su
-          propósito, flujo y retorno:
-        </p>
-        <CodeBlock
-          code={`"use server";
+<h3 className="subsection-title">
+  7.2. <code>app/actions/auth.ts</code> (COMPLETO)
+</h3>
+
+<p className="section-paragraph">
+  Este archivo contiene las Server Actions relacionadas con autenticación:
+  inicio de sesión, registro, cierre de sesión, recuperación y restablecimiento
+  de contraseña. También incorpora validación con Zod, hash de contraseñas con
+  bcrypt, protección contra múltiples intentos, sesiones, verificación por
+  correo electrónico y registro de actividades.
+</p>
+
+<CodeBlock
+  code={`"use server";
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -99,6 +106,7 @@ import { randomBytes } from "crypto";
 // ============================================================================
 // ESQUEMAS DE VALIDACIÓN
 // ============================================================================
+
 const loginSchema = z.object({
   email: z.string().email("Correo inválido"),
   password: z.string().min(1, "La contraseña es requerida"),
@@ -108,9 +116,13 @@ const registerSchema = z
   .object({
     name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
     email: z.string().email("Correo inválido"),
-    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres"),
     confirmPassword: z.string(),
-    terms: z.boolean().refine((val) => val === true, "Debes aceptar los términos"),
+    terms: z
+      .boolean()
+      .refine((val) => val === true, "Debes aceptar los términos"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden",
@@ -123,7 +135,9 @@ const forgotPasswordSchema = z.object({
 
 const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -134,23 +148,34 @@ const resetPasswordSchema = z
 // ============================================================================
 // FUNCIÓN 1: LOGIN
 // ============================================================================
+
 export async function loginAction(formData: FormData) {
   const headersList = await headers();
+
   const ip = headersList.get("x-forwarded-for") || "unknown";
   const userAgent = headersList.get("user-agent") || "";
 
   const rateLimitKey = \`login_\${ip}\`;
   const rateLimit = checkRateLimit(rateLimitKey);
+
   if (!rateLimit.success) {
-    return { error: "Demasiados intentos. Espera un minuto." };
+    return {
+      error: "Demasiados intentos. Espera un minuto.",
+    };
   }
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const result = loginSchema.safeParse({ email, password });
+  const result = loginSchema.safeParse({
+    email,
+    password,
+  });
+
   if (!result.success) {
-    return { error: result.error.issues[0].message };
+    return {
+      error: result.error.issues[0].message,
+    };
   }
 
   const user = await db
@@ -160,15 +185,28 @@ export async function loginAction(formData: FormData) {
     .get();
 
   if (!user) {
-    return { error: "Credenciales incorrectas" };
+    return {
+      error: "Credenciales incorrectas",
+    };
   }
 
-  const isValid = await comparePassword(password, user.passwordHash);
+  const isValid = await comparePassword(
+    password,
+    user.passwordHash
+  );
+
   if (!isValid) {
-    return { error: "Credenciales incorrectas" };
+    return {
+      error: "Credenciales incorrectas",
+    };
   }
 
-  await createSession(user.id, userAgent, ip);
+  await createSession(
+    user.id,
+    userAgent,
+    ip
+  );
+
   await updateLastLogin(user.id);
 
   await logActivity({
@@ -180,27 +218,35 @@ export async function loginAction(formData: FormData) {
   });
 
   revalidatePath("/dashboard");
+
   redirect("/dashboard");
 }
 
 // ============================================================================
 // FUNCIÓN 2: REGISTER
 // ============================================================================
+
 export async function registerAction(formData: FormData) {
   const headersList = await headers();
+
   const ip = headersList.get("x-forwarded-for") || "unknown";
   const userAgent = headersList.get("user-agent") || "";
 
   const rateLimitKey = \`register_\${ip}\`;
   const rateLimit = checkRateLimit(rateLimitKey);
+
   if (!rateLimit.success) {
-    return { error: "Demasiados intentos. Espera un minuto." };
+    return {
+      error: "Demasiados intentos. Espera un minuto.",
+    };
   }
 
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  const confirmPassword =
+    formData.get("confirmPassword") as string;
+
   const terms = formData.get("terms") === "on";
 
   const result = registerSchema.safeParse({
@@ -210,13 +256,19 @@ export async function registerAction(formData: FormData) {
     confirmPassword,
     terms,
   });
+
   if (!result.success) {
-    return { error: result.error.issues[0].message };
+    return {
+      error: result.error.issues[0].message,
+    };
   }
 
   const strength = validatePasswordStrength(password);
+
   if (!strength.valid) {
-    return { error: strength.errors[0] };
+    return {
+      error: strength.errors[0],
+    };
   }
 
   const existingUser = await db
@@ -226,11 +278,15 @@ export async function registerAction(formData: FormData) {
     .get();
 
   if (existingUser) {
-    return { error: "Este correo ya está registrado" };
+    return {
+      error: "Este correo ya está registrado",
+    };
   }
 
   const hashedPassword = await hashPassword(password);
-  const verificationToken = randomBytes(32).toString("hex");
+
+  const verificationToken =
+    randomBytes(32).toString("hex");
 
   const newUser = await db
     .insert(users)
@@ -245,9 +301,23 @@ export async function registerAction(formData: FormData) {
     .returning()
     .get();
 
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const { subject, html } = generateVerificationEmail(email, verificationToken, appUrl);
-  await sendEmail({ to: email, subject, html });
+  const appUrl =
+    process.env.APP_URL || "http://localhost:3000";
+
+  const {
+    subject,
+    html,
+  } = generateVerificationEmail(
+    email,
+    verificationToken,
+    appUrl
+  );
+
+  await sendEmail({
+    to: email,
+    subject,
+    html,
+  });
 
   await logActivity({
     userId: newUser.id,
@@ -263,11 +333,15 @@ export async function registerAction(formData: FormData) {
 // ============================================================================
 // FUNCIÓN 3: LOGOUT
 // ============================================================================
+
 export async function logoutAction() {
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || "unknown";
+
+  const ip =
+    headersList.get("x-forwarded-for") || "unknown";
 
   const session = await getSession();
+
   if (session) {
     await logActivity({
       userId: session.userId,
@@ -277,8 +351,12 @@ export async function logoutAction() {
     });
   }
 
-  const cookieStore = await headers();
-  const token = (await cookieStore).get("session_token")?.value;
+  // Obtener la cookie de sesión correctamente.
+  const cookieStore = await cookies();
+
+  const token =
+    cookieStore.get("session_token")?.value;
+
   if (token) {
     await deleteSession(token);
   }
@@ -289,20 +367,38 @@ export async function logoutAction() {
 // ============================================================================
 // FUNCIÓN 4: FORGOT PASSWORD
 // ============================================================================
-export async function forgotPasswordAction(formData: FormData) {
+
+export async function forgotPasswordAction(
+  formData: FormData
+) {
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || "unknown";
+
+  const ip =
+    headersList.get("x-forwarded-for") || "unknown";
 
   const rateLimitKey = \`forgot_\${ip}\`;
-  const rateLimit = checkRateLimit(rateLimitKey);
+
+  const rateLimit =
+    checkRateLimit(rateLimitKey);
+
   if (!rateLimit.success) {
-    return { error: "Demasiados intentos. Espera un minuto." };
+    return {
+      error: "Demasiados intentos. Espera un minuto.",
+    };
   }
 
-  const email = formData.get("email") as string;
-  const result = forgotPasswordSchema.safeParse({ email });
+  const email =
+    formData.get("email") as string;
+
+  const result =
+    forgotPasswordSchema.safeParse({
+      email,
+    });
+
   if (!result.success) {
-    return { error: result.error.issues[0].message };
+    return {
+      error: result.error.issues[0].message,
+    };
   }
 
   const user = await db
@@ -311,12 +407,18 @@ export async function forgotPasswordAction(formData: FormData) {
     .where(eq(users.email, email))
     .get();
 
+  // No revelar si el correo está registrado.
   if (!user) {
-    return { success: true };
+    return {
+      success: true,
+    };
   }
 
-  const resetToken = randomBytes(32).toString("hex");
-  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+  const resetToken =
+    randomBytes(32).toString("hex");
+
+  const resetTokenExpiry =
+    new Date(Date.now() + 60 * 60 * 1000);
 
   await db
     .update(users)
@@ -326,38 +428,76 @@ export async function forgotPasswordAction(formData: FormData) {
     })
     .where(eq(users.id, user.id));
 
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const { subject, html } = generateResetPasswordEmail(email, resetToken, appUrl);
-  await sendEmail({ to: email, subject, html });
+  const appUrl =
+    process.env.APP_URL ||
+    "http://localhost:3000";
+
+  const {
+    subject,
+    html,
+  } = generateResetPasswordEmail(
+    email,
+    resetToken,
+    appUrl
+  );
+
+  await sendEmail({
+    to: email,
+    subject,
+    html,
+  });
 
   await logActivity({
     userId: user.id,
     action: "forgot_password",
-    details: "Solicitud de restablecimiento de contraseña",
+    details:
+      "Solicitud de restablecimiento de contraseña",
     ip,
   });
 
-  return { success: true };
+  return {
+    success: true,
+  };
 }
 
 // ============================================================================
 // FUNCIÓN 5: RESET PASSWORD
 // ============================================================================
-export async function resetPasswordAction(token: string, formData: FormData) {
+
+export async function resetPasswordAction(
+  token: string,
+  formData: FormData
+) {
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || "unknown";
 
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+  const ip =
+    headersList.get("x-forwarded-for") || "unknown";
 
-  const result = resetPasswordSchema.safeParse({ password, confirmPassword });
+  const password =
+    formData.get("password") as string;
+
+  const confirmPassword =
+    formData.get("confirmPassword") as string;
+
+  const result =
+    resetPasswordSchema.safeParse({
+      password,
+      confirmPassword,
+    });
+
   if (!result.success) {
-    return { error: result.error.issues[0].message };
+    return {
+      error: result.error.issues[0].message,
+    };
   }
 
-  const strength = validatePasswordStrength(password);
+  const strength =
+    validatePasswordStrength(password);
+
   if (!strength.valid) {
-    return { error: strength.errors[0] };
+    return {
+      error: strength.errors[0],
+    };
   }
 
   const user = await db
@@ -367,14 +507,23 @@ export async function resetPasswordAction(token: string, formData: FormData) {
     .get();
 
   if (!user) {
-    return { error: "Token inválido o expirado" };
+    return {
+      error: "Token inválido o expirado",
+    };
   }
 
-  if (!user.resetTokenExpiry || new Date(user.resetTokenExpiry) < new Date()) {
-    return { error: "El token ha expirado" };
+  if (
+    !user.resetTokenExpiry ||
+    new Date(user.resetTokenExpiry) < new Date()
+  ) {
+    return {
+      error: "El token ha expirado",
+    };
   }
 
-  const hashedPassword = await hashPassword(password);
+  const hashedPassword =
+    await hashPassword(password);
+
   await db
     .update(users)
     .set({
@@ -384,18 +533,21 @@ export async function resetPasswordAction(token: string, formData: FormData) {
     })
     .where(eq(users.id, user.id));
 
+  // Cerrar todas las sesiones existentes
+  // después de cambiar la contraseña.
   await logoutAllDevices(user.id);
 
   await logActivity({
     userId: user.id,
     action: "reset_password",
-    details: "Contraseña restablecida exitosamente",
+    details:
+      "Contraseña restablecida exitosamente",
     ip,
   });
 
   redirect("/login?reset=true");
 }`}
-        />
+ /> 
         <div className="tip">
           <span className="tip-icon">📚</span>
           <span>

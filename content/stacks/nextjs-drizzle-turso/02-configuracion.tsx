@@ -106,9 +106,12 @@ export const activityLogs = sqliteTable("activity_logs", {
           <strong>Objetivo:</strong> Crear funciones para hashear/verificar contraseñas y manejar
           sesiones con cookies.
         </p>
-        <h3 className="subsection-title">5.1. <code>lib/password.ts</code></h3>
-        <CodeBlock
-          code={`import bcrypt from "bcryptjs";
+<h3 className="subsection-title">
+  5.1. <code>lib/password.ts</code>
+</h3>
+
+<CodeBlock
+  code={`import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 const SALT_ROUNDS = 12;
@@ -137,8 +140,15 @@ export function validatePasswordStrength(password: string): {
   errors: string[];
 } {
   const result = passwordSchema.safeParse(password);
-  if (result.success) return { valid: true, errors: [] };
-  return { valid: false, errors: result.error.errors.map((e) => e.message) };
+
+  if (result.success) {
+    return { valid: true, errors: [] };
+  }
+
+  return {
+    valid: false,
+    errors: result.error.issues.map((e) => e.message),
+  };
 }`}
         />
         <h3 className="subsection-title">5.2. <code>lib/auth.ts</code></h3>

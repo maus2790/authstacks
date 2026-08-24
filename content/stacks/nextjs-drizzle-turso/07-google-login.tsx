@@ -1,7 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { CommandBlock } from "@/components/ui/CommandBlock";
+import { OsCommandTabs } from "@/components/ui/OsCommandTabs";
+import { X, ChevronDown, ChevronUp, Info } from "lucide-react";
 
 export default function GoogleLogin() {
+  // Estado para el acordeón del PASO 3 (credenciales) - expandido por defecto
+  const [isStep3Open, setIsStep3Open] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <>
       <header className="content-header">
@@ -12,6 +21,7 @@ export default function GoogleLogin() {
         </p>
       </header>
 
+      {/* ==================== PASO 1 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📦</span>
@@ -32,57 +42,242 @@ export default function GoogleLogin() {
         </div>
       </section>
 
+      {/* ==================== PASO 2: COMANDOS CON TABS ==================== */}
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔑</span>
-          PASO 2: Obtener credenciales de Google
+          <span className="section-icon">🛠️</span>
+          PASO 2: Crear archivos y carpetas
         </h2>
-        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
-          <li>
-            Ve a <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Google Cloud Console</a>.
-          </li>
-          <li>Crea un proyecto o selecciona uno existente.</li>
-          <li>Ve a <strong>APIs y servicios → Credenciales</strong>.</li>
-          <li>Crea unas credenciales de tipo <strong>ID de cliente OAuth</strong>.</li>
-          <li>
-            Configura la <strong>URI de redireccionamiento</strong> (no la usaremos porque usamos token ID desde el frontend, pero es obligatoria; pon <code>http://localhost:3000</code>).
-          </li>
-          <li>Copia el <strong>ID de cliente</strong> y el <strong>Secreto de cliente</strong>.</li>
-        </ol>
+
+        <p className="section-paragraph">
+          Crea los archivos y carpetas necesarios para la implementación del login con Google.
+          Selecciona tu sistema operativo:
+        </p>
+
+        <OsCommandTabs
+          windowsCode={`# Crear carpetas necesarias
+New-Item -ItemType Directory -Path "app/api/auth/google" -Force
+
+# Crear archivos
+New-Item -ItemType File -Path "app/api/auth/google/route.ts" -Force
+New-Item -ItemType File -Path "app/components/auth/GoogleLoginButton.tsx" -Force
+
+Write-Host "✅ Archivos creados exitosamente!" -ForegroundColor Green`}
+          linuxCode={`# Crear carpetas necesarias
+mkdir -p app/api/auth/google
+
+# Crear archivos
+touch app/api/auth/google/route.ts
+touch app/components/auth/GoogleLoginButton.tsx
+
+echo "✅ Archivos creados exitosamente!"`}
+        />
+
         <div className="tip">
           <span className="tip-icon">💡</span>
           <span>
-            La URI de redireccionamiento es obligatoria para crear las credenciales, pero en este flujo
-            no la utilizamos porque obtenemos el token directamente desde el frontend y luego
-            consultamos la API de Google para obtener los datos del usuario.
+            Estos comandos asumen que estás en la raíz de tu proyecto. Ajusta las rutas según
+            la estructura de tu aplicación.
           </span>
         </div>
       </section>
 
+      {/* ==================== PASO 3 (CREDENCIALES - COLAPSABLE) ==================== */}
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔑</span>
+          PASO 3: Obtener credenciales de Google
+          <button
+            onClick={() => setIsStep3Open(!isStep3Open)}
+            className="ml-3 text-blue-400 hover:text-blue-300 transition-colors"
+            aria-label={isStep3Open ? "Ocultar guía" : "Mostrar guía"}
+          >
+            {isStep3Open ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+        </h2>
+
+        <p className="section-paragraph">
+          Para obtener el <strong>Client ID</strong> y el <strong>Client Secret</strong>, necesitas
+          crear un proyecto en Google Cloud Console y habilitar la API de OAuth 2.0.{' '}
+          <span
+            className="underline cursor-pointer text-blue-400 hover:text-blue-300 transition-colors"
+            onClick={() => setIsStep3Open(!isStep3Open)}
+          >
+            {isStep3Open ? "Ocultar pasos" : "Sigue los pasos a continuación"}
+          </span>
+        </p>
+
+        {isStep3Open && (
+          <div className="space-y-6">
+            <ol className="list-decimal pl-6 text-gray-300 space-y-6">
+              <li>
+                <p><strong>Paso 1: Crear proyecto en Google Cloud Platform</strong></p>
+                <p>
+                  Accede a <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Google Cloud Console</a> y crea un nuevo proyecto.
+                </p>
+                <img
+                  src="/images/google/img9.png"
+                  alt="Crear proyecto en Google Cloud"
+                  className="rounded-lg border border-gray-700 my-2 max-w-full"
+                />
+              </li>
+              <li>
+                <p><strong>Paso 2: Acceder a APIs y Servicios</strong></p>
+                <p>
+                  En el menú lateral, selecciona <strong>"APIs y Servicios"</strong> y luego <strong>"Pantalla de consentimiento de OAuth"</strong>.
+                </p>
+                <img
+                  src="/images/google/img10.png"
+                  alt="APIs y Servicios en Google Cloud"
+                  className="rounded-lg border border-gray-700 my-2 max-w-full"
+                />
+              </li>
+              <li>
+                <p><strong>Paso 3: Configurar la pantalla de consentimiento</strong></p>
+                <p>Completa los siguientes campos:</p>
+                <ul className="list-disc pl-6 text-gray-300 space-y-1">
+                  <li>
+                    <strong>Nombre de la aplicación:</strong> Ingresa el nombre de tu aplicación (ej. "TasksApp").
+                  </li>
+                  <li>
+                    <strong>Correo electrónico de asistencia:</strong> Ingresa tu correo electrónico para que los usuarios puedan contactarte.
+                  </li>
+                  <li>
+                    <strong>Usuarios externos:</strong> Selecciona <strong>"Externo"</strong> (para permitir que cualquier usuario con cuenta de Google pueda iniciar sesión).
+                  </li>
+                  <li>
+                    <strong>Correo electrónico de contacto:</strong> Ingresa tu correo para recibir novedades sobre tu proyecto.
+                  </li>
+                </ul>
+                <p>Haz clic en <strong>"Guardar y continuar"</strong> y avanza hasta completar la configuración.</p>
+                <img
+                  src="/images/google/img11.png"
+                  alt="Pantalla de consentimiento OAuth"
+                  className="rounded-lg border border-gray-700 my-2 max-w-full"
+                />
+                <div className="tip" style={{ borderLeftColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', marginTop: '1rem' }}>
+                  <span className="tip-icon">✅</span>
+                  <span>Después de completar estos pasos, haz clic en <strong>"Guardar y continuar"</strong> hasta finalizar la configuración.</span>
+                </div>
+              </li>
+              <li>
+                <p><strong>Paso 4: Crear credenciales de OAuth</strong></p>
+                <p>
+                  Ve a <strong>"Credenciales"</strong> y haz clic en <strong>"Crear credenciales"</strong> → <strong>"ID de cliente OAuth"</strong>.
+                  Selecciona <strong>"Aplicación web"</strong> como tipo.
+                </p>
+
+                {/* 🌐 Configuración de orígenes y URIs */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 my-4">
+                  <h5 className="font-semibold text-blue-300 mb-3">
+                    🌐 Configuración de orígenes y URIs de redireccionamiento
+                  </h5>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-foreground font-medium">Para desarrollo local:</p>
+                      <ul className="list-disc pl-6 text-muted-foreground mt-1">
+                        <li>
+                          <strong>Orígenes autorizados de JavaScript:</strong>{' '}
+                          <code>http://localhost:3000</code>
+                        </li>
+                        <li>
+                          <strong>URIs de redireccionamiento autorizados:</strong>{' '}
+                          <code>http://localhost:3000/api/auth/callback/google</code>
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-foreground font-medium">Para producción (Vercel):</p>
+                      <ul className="list-disc pl-6 text-muted-foreground mt-1">
+                        <li>
+                          <strong>Orígenes autorizados de JavaScript:</strong>{' '}
+                          <code>https://&lt;tu-proyecto&gt;.vercel.app</code>
+                        </li>
+                        <li>
+                          <strong>URIs de redireccionamiento autorizados:</strong>{' '}
+                          <code>https://&lt;tu-proyecto&gt;.vercel.app/api/auth/callback/google</code>
+                        </li>
+                      </ul>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ejemplo: <code>https://next-drizzle-turso.vercel.app</code> y su correspondiente callback.
+                      </p>
+                    </div>
+                    <div className="tip" style={{ borderLeftColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
+                      <span className="tip-icon">⚠️</span>
+                      <span>
+                        Si despliegas en <strong>Vercel</strong>, el dominio gratuito será similar a{' '}
+                        <code>https://&lt;tu-proyecto&gt;.vercel.app</code>. Asegúrate de usar
+                        <strong>https</strong> (no http) en producción.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p>
+                  Copia el <strong>ID de cliente</strong> y el <strong>Secreto de cliente</strong>.
+                  Los usarás en el siguiente paso.
+                </p>
+                <img
+                  src="/images/google/img12.png"
+                  alt="Orígenes autorizados y URIs de redireccionamiento"
+                  className="rounded-lg border border-gray-700 my-2 max-w-full"
+                />
+              </li>
+            </ol>
+
+            <div className="tip">
+              <span className="tip-icon">💡</span>
+              <span>
+                La URI de redireccionamiento es necesaria para que Google sepa a dónde enviar al usuario
+                después de autenticarse. Asegúrate de que coincida con la ruta de tu aplicación.
+              </span>
+            </div>
+
+            {/* ⭐ Enlace al modal al final del PASO 3 */}
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+              <span
+                className="text-blue-400 underline cursor-pointer hover:text-blue-300 transition-colors"
+                onClick={() => setIsModalOpen(true)}
+              >
+                <Info size={16} className="inline mr-1" />
+                Más información de la plataforma
+              </span>
+              <span className="text-gray-500 text-sm">(cuotas, precios y limitaciones)</span>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ==================== PASO 4 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🔐</span>
-          PASO 3: Variables de entorno (<code>.env</code>)
+          PASO 4: Variables de entorno (<code>.env</code>)
         </h2>
-        <p className="section-paragraph">Añade al final de tu <code>.env</code>:</p>
+        <p className="section-paragraph">
+          Añade al final de tu <code>.env</code> las siguientes variables:
+        </p>
         <CodeBlock
           code={`# Google OAuth
 GOOGLE_CLIENT_ID="<tu-client-id>.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="<tu-client-secret>"`}
         />
+
         <div className="tip">
           <span className="tip-icon">⚠️</span>
           <span>
             El <strong>Client ID</strong> se expone en el frontend (es público), pero el{' '}
             <strong>Client Secret</strong> solo se usa en el servidor. Nunca lo expongas en el cliente.
+            Asegúrate de tener el archivo <code>.env</code> en tu <code>.gitignore</code>.
           </span>
         </div>
       </section>
 
+      {/* ==================== PASO 5 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🌐</span>
-          PASO 4: Endpoint API para recibir los datos del usuario de Google
+          PASO 5: Endpoint API para recibir los datos del usuario de Google
         </h2>
         <p className="section-paragraph">
           Crea el archivo <code>app/api/auth/google/route.ts</code>:
@@ -166,10 +361,11 @@ export async function POST(request: NextRequest) {
         </div>
       </section>
 
+      {/* ==================== PASO 6 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🧩</span>
-          PASO 5: Componente botón de Google
+          PASO 6: Componente botón de Google
         </h2>
         <p className="section-paragraph">
           Crea <code>app/components/auth/GoogleLoginButton.tsx</code>:
@@ -291,10 +487,11 @@ export default function GoogleLoginButton() {
         </div>
       </section>
 
+      {/* ==================== PASO 7 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📄</span>
-          PASO 6: Modificar la página de login
+          PASO 7: Modificar la página de login
         </h2>
         <p className="section-paragraph">
           Primero, envuelve tu aplicación con <code>GoogleOAuthProvider</code> en{' '}
@@ -448,10 +645,11 @@ export default function LoginPage() {
         />
       </section>
 
+      {/* ==================== PASO 8 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🗄️</span>
-          PASO 7: Ajustar el esquema de base de datos (OPCIONAL)
+          PASO 8: Ajustar el esquema de base de datos (OPCIONAL)
         </h2>
         <p className="section-paragraph">
           Para evitar duplicación de usuarios por email, ya usamos el email como único. No necesitamos
@@ -476,10 +674,11 @@ export default function LoginPage() {
         </div>
       </section>
 
+      {/* ==================== PASO 9 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📋</span>
-          PASO 8: Archivos completos (lista)
+          PASO 9: Archivos completos (lista)
         </h2>
         <p className="section-paragraph">
           Aquí tienes la lista de archivos que has creado o modificado:
@@ -502,10 +701,11 @@ export default function LoginPage() {
         </ul>
       </section>
 
+      {/* ==================== PASO 10 ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">✅</span>
-          PASO 9: Verificación
+          PASO 10: Verificación
         </h2>
         <ol className="list-decimal pl-6 text-gray-300 space-y-2">
           <li>Asegúrate de tener las variables de entorno con el Client ID correcto.</li>
@@ -519,6 +719,7 @@ export default function LoginPage() {
         </p>
       </section>
 
+      {/* ==================== SOLUCIÓN DE PROBLEMAS ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🚨</span>
@@ -559,6 +760,7 @@ export default function LoginPage() {
         </div>
       </section>
 
+      {/* ==================== CONCLUSIÓN ==================== */}
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🎯</span>
@@ -585,6 +787,155 @@ export default function LoginPage() {
           ¡Ahora tu aplicación es más versátil! 🚀
         </p>
       </section>
+
+      {/* ===================== MODAL DE INFORMACIÓN DE GOOGLE ===================== */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-card rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-border shadow-2xl" onClick={(e) => e.stopPropagation()}>
+
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm p-4 border-b border-border flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <Info size={24} className="text-blue-400" />
+                Información de Google Cloud Platform
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted"
+                aria-label="Cerrar modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-8">
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5">
+                <div className="flex gap-3">
+                  <Info className="text-blue-400 shrink-0 mt-0.5" size={22} />
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-300 mb-2">
+                      Google Cloud Platform – OAuth 2.0
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Google Cloud Platform ofrece servicios de autenticación a través de OAuth 2.0.
+                      El uso básico de la API de OAuth es gratuito, pero existen límites de cuotas
+                      que pueden afectar a aplicaciones con alto volumen de solicitudes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">
+                  Cuotas y límites de la API de OAuth 2.0
+                </h3>
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[600px] text-sm text-left">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 border-b border-border">Recurso</th>
+                        <th className="p-3 border-b border-border">Límite gratuito</th>
+                        <th className="p-3 border-b border-border">Excedente</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Solicitudes de token</td>
+                        <td className="p-3">10,000 / día</td>
+                        <td className="p-3">$0.05 / 1,000</td>
+                      </tr>
+                      <tr className="border-b border-border hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Llamadas a API (userinfo)</td>
+                        <td className="p-3">10,000 / día</td>
+                        <td className="p-3">$0.05 / 1,000</td>
+                      </tr>
+                      <tr className="border-b border-border hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Almacenamiento de credenciales</td>
+                        <td className="p-3">Ilimitado</td>
+                        <td className="p-3">Gratuito</td>
+                      </tr>
+                      <tr className="hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Usuarios únicos (autenticados)</td>
+                        <td className="p-3">Ilimitado</td>
+                        <td className="p-3">Gratuito</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Fuente: <a href="https://cloud.google.com/identity-platform/pricing" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Google Cloud Identity Platform Pricing</a> (Abril 2026)
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">
+                  Alternativa: Google Cloud Identity Platform
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  Si tu aplicación necesita autenticación avanzada (MFA, SSO, múltiples proveedores),
+                  puedes usar Identity Platform. Sus planes son:
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[600px] text-sm text-left">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 border-b border-border">Plan</th>
+                        <th className="p-3 border-b border-border">Precio/mes</th>
+                        <th className="p-3 border-b border-border">Usuarios activos</th>
+                        <th className="p-3 border-b border-border">Características</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Gratuito</td>
+                        <td className="p-3">$0</td>
+                        <td className="p-3">Hasta 50,000 MAU</td>
+                        <td className="p-3">OAuth, email/contraseña, SMS, MFA</td>
+                      </tr>
+                      <tr className="border-b border-border hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Pro</td>
+                        <td className="p-3">$0.0055 / MAU</td>
+                        <td className="p-3">Ilimitado</td>
+                        <td className="p-3">+ SSO, SAML, OIDC, soporte</td>
+                      </tr>
+                      <tr className="hover:bg-muted/50">
+                        <td className="p-3 font-medium text-foreground">Enterprise</td>
+                        <td className="p-3">Personalizado</td>
+                        <td className="p-3">Ilimitado</td>
+                        <td className="p-3">+ SLA, cumplimiento, soporte premium</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-sm text-muted-foreground mt-3">
+                  MAU = Monthly Active Users (usuarios activos mensuales). El plan gratuito de OAuth 2.0 es suficiente para la mayoría de las aplicaciones en etapas iniciales.
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-5">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
+                  Buenas prácticas para evitar superar las cuotas
+                </h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• Almacenar en caché la información del usuario (ej. en sesión) para no llamar a la API de Google en cada solicitud.</li>
+                  <li>• Usar tokens de acceso con expiración y renovación automática.</li>
+                  <li>• Monitorizar el uso desde la consola de Google Cloud.</li>
+                  <li>• Configurar alertas de consumo en la consola.</li>
+                </ul>
+              </div>
+
+              <div className="border-t border-border pt-5">
+                <div className="bg-muted rounded-lg p-4">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    <strong className="text-foreground">Importante:</strong> Los precios y límites pueden cambiar. Consulta la documentación oficial de Google Cloud Platform para obtener la información más actualizada.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -101,30 +101,108 @@ export default async function HomePage() {
   }
 }`}
         />
-        <h3 className="subsection-title">8.4. <code>app/globals.css</code></h3>
-        <CodeBlock
-          code={`@tailwind base;
-@tailwind components;
-@tailwind utilities;
+<h3 className="subsection-title">
+  8.4. <code>app/globals.css</code>
+</h3>
+
+<p className="section-paragraph">
+  Este archivo contiene los estilos globales de la aplicación. Se utiliza
+  Tailwind CSS v4 mediante <code>@import "tailwindcss"</code> y se definen
+  componentes reutilizables para efectos de vidrio, campos de formulario y
+  botones con degradado. Los estilos están preparados para funcionar tanto
+  en modo claro como en modo oscuro.
+</p>
+
+<CodeBlock
+  code={`@import "tailwindcss";
 
 @layer base {
   body {
-    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer components {
+  /* ========================================================================
+     EFECTO GLASS
+     ======================================================================== */
+
   .glass {
-    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
   }
+
+  /* ========================================================================
+     INPUT GLASS
+     ======================================================================== */
+
   .input-glass {
-    @apply w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    color: #fff;
+
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
+
+  .input-glass::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .input-glass:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+  }
+
+  /* ========================================================================
+     BOTÓN CON DEGRADADO
+     ======================================================================== */
+
   .btn-gradient {
-    @apply w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:opacity-90 transition disabled:opacity-50;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+
+    background: linear-gradient(
+      90deg,
+      #06b6d4 0%,
+      #2563eb 100%
+    );
+
+    color: #fff;
+    font-weight: 600;
+
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .btn-gradient:hover {
+    opacity: 0.9;
+  }
+
+  .btn-gradient:active {
+    transform: scale(0.98);
+  }
+
+  .btn-gradient:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 }`}
-        />
+ />
         <h3 className="subsection-title">8.5. <code>.gitignore</code></h3>
         <CodeBlock
           code={`# dependencies
