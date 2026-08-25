@@ -77,4 +77,12 @@ export const stepComponents: Record<string, Record<string, StepLoader>> = {
     "05-dashboard-perfil": () => import("@/content/stacks/nextjs-supabase/05-dashboard-perfil"),
     "06-google-oauth": () => import("@/content/stacks/nextjs-supabase/06-google-oauth"),
   },
+  "void-drizzle-better-auth": {
+    "01-inicio": () => import("@/content/stacks/void-drizzle-better-auth/01-inicio"),
+    "02-configuracion": () => import("@/content/stacks/void-drizzle-better-auth/02-configuracion"),
+    "03-auth-server": () => import("@/content/stacks/void-drizzle-better-auth/03-auth-server"),
+    "04-frontend": () => import("@/content/stacks/void-drizzle-better-auth/04-frontend"),
+    "05-proteccion-rutas": () => import("@/content/stacks/void-drizzle-better-auth/05-proteccion-rutas"),
+    "06-google-oauth": () => import("@/content/stacks/void-drizzle-better-auth/06-google-oauth"),
+  },
 };

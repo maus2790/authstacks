@@ -1,0 +1,8 @@
+[
+  { "slug": "01-inicio", "title": "Inicio - Instalación", "order": 1 },
+  { "slug": "02-configuracion", "title": "Configuración de Drizzle y Void", "order": 2 },
+  { "slug": "03-auth-server", "title": "Servidor de Autenticación con Better Auth", "order": 3 },
+  { "slug": "04-frontend", "title": "Componentes de Login y Registro", "order": 4 },
+  { "slug": "05-proteccion-rutas", "title": "Protección de Rutas y Sesión", "order": 5 },
+  { "slug": "06-google-oauth", "title": "Login con Google (OAuth)", "order": 6 }
+]

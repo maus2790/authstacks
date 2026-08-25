@@ -1,0 +1,8 @@
+{
+  "name": "Void + Drizzle + Better Auth",
+  "slug": "void-drizzle-better-auth",
+  "description": "El stack del futuro: infraestructura aprovisionada automáticamente. Void escanea tu código, crea la base de datos D1, configura Better Auth y despliega todo con un solo comando.",
+  "difficulty": "Intermedio",
+  "icon": "🚀",
+  "tags": ["Void", "Drizzle", "Better Auth", "D1", "Full-Stack"]
+}
