@@ -444,10 +444,17 @@ export default defineConfig({
       "email"
     ]
   },
+  "inference": {
+    "appType": "void",
+    "bindings": {
+      "db": true
+    }
+  },
   "worker": {
     "compatibility_date": "2026-02-24"
   }
-}`}
+}
+`}
         />
 
         <h3 className="subsection-title">3.4. Variables de entorno (<code>.env</code>)</h3>
