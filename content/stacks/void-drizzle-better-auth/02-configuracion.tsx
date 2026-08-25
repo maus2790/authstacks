@@ -115,7 +115,9 @@ export function createDb(env: { DB: D1Database }) {
           Void usa D1, que es SQLite. Configura Drizzle para que sepa que trabajas con SQLite.
         </p>
         <CodeBlock
-          code={`export default defineConfig({
+          code={`import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
   schema: "./db/schema.ts",
   dialect: "sqlite",
   dbCredentials: {
