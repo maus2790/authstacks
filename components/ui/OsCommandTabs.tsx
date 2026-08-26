@@ -51,7 +51,10 @@ export function OsCommandTabs({
           {linuxLabel}
         </button>
       </div>
-      <CodeBlock language={language} code={os === 'windows' ? windowsCode : linuxCode} />
+      <CodeBlock
+        language={language}
+        code={os === 'windows' ? windowsCode : linuxCode}
+      />
     </div>
   );
 }

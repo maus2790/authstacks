@@ -7,29 +7,44 @@ export default function Frontend() {
       <header className="content-header">
         <h1 className="content-title">Páginas de Autenticación</h1>
         <p className="content-subtitle">
-          Configuración de páginas de login y registro con Auth0 Universal Login
+          Landing con botones de Registrarse e Iniciar sesión
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🌐</span>
-          1. Universal Login de Auth0
+          1. Cómo funciona el login y el registro
         </h2>
         <p className="section-paragraph">
-          Auth0 maneja automáticamente las páginas de autenticación a través de <strong>Universal Login</strong>.
-          Puedes personalizar la apariencia desde el dashboard de Auth0.
+          Auth0 muestra sus propias páginas de login y registro ({" "}
+          <strong>Universal Login</strong>), hosteadas por ellos. Tú solo necesitas
+          dos enlaces:
         </p>
-        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
-          <li>Ve a <strong>Branding → Universal Login</strong> en el dashboard.</li>
-          <li>Personaliza el logo, colores, y estilos de la página de login.</li>
-          <li>Puedes usar plantillas HTML personalizadas para un control total.</li>
-        </ol>
+        <ul className="list-disc pl-6 text-gray-300 space-y-2">
+          <li>
+            <code>/auth/login</code> → página de login (con enlace a "Sign up" si el
+            registro está habilitado).
+          </li>
+          <li>
+            <code>/auth/login?screen_hint=signup</code> → <strong>directo al formulario
+            de registro</strong>.
+          </li>
+        </ul>
         <div className="tip">
           <span className="tip-icon">🎨</span>
           <span>
-            Universal Login es la forma más segura y mantenible de manejar autenticación
-            con Auth0. Todas las redirecciones son manejadas automáticamente.
+            Puedes personalizar la apariencia (logo, colores, idioma) en{" "}
+            <strong>Branding → Universal Login</strong> del dashboard de Auth0, sin
+            tocar código.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            Usa etiquetas <code>&lt;a&gt;</code> (no <code>&lt;Link&gt;</code>) para
+            estos enlaces: la redirección a Auth0 debe ser un navegador completo,
+            no navegación cliente de Next.
           </span>
         </div>
       </section>
@@ -37,135 +52,78 @@ export default function Frontend() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📄</span>
-          2. Página de Login personalizada (opcional)
+          2. Página de inicio (<code>app/page.tsx</code>)
         </h2>
         <p className="section-paragraph">
-          Si prefieres manejar el login desde tu propia UI, puedes crear una página de login personalizada
-          que redirija a Auth0. Crea <code>app/login/page.tsx</code>:
+          Reemplaza el contenido de <code>app/page.tsx</code> por esto. Es un Server
+          Component que lee la sesión: si ya estás autenticado te manda al dashboard;
+          si no, muestra los botones:
         </p>
+        <h3 className="subsection-title">app/page.tsx</h3>
         <CodeBlock
-          code={`"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+          code={`import { redirect } from "next/navigation";
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+import { auth0 } from "@/lib/auth0";
 
-  const handleLogin = () => {
-    setLoading(true);
-    window.location.href = "/api/auth/login";
-  };
+export default async function Home() {
+  const session = await auth0.getSession();
+
+  // Si ya hay sesión, ir directo al dashboard
+  if (session) {
+    redirect("/dashboard");
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700 p-4">
-      <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-xl w-full max-w-md border border-white/20">
-        <h1 className="text-3xl font-bold text-white text-center mb-6">Bienvenido</h1>
-        <p className="text-white/60 text-center mb-8">
-          Inicia sesión con Auth0 para acceder a tu cuenta
+      <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 text-center shadow-xl backdrop-blur-lg">
+        <h1 className="mb-2 text-3xl font-bold text-white">Bienvenido</h1>
+        <p className="mb-8 text-white/60">
+          Inicia sesión o crea una cuenta. Auth0 se encarga de la autenticación.
         </p>
-        <Button
-          variant="primary"
-          onClick={handleLogin}
-          loading={loading}
-          className="w-full text-lg py-6"
-        >
-          Iniciar sesión con Auth0
-        </Button>
-        <p className="text-white/40 text-center text-sm mt-4">
-          Auth0 maneja la autenticación de forma segura
-        </p>
+
+        <div className="flex flex-col gap-3">
+          <a
+            href="/auth/login?screen_hint=signup"
+            className="w-full rounded-lg bg-white px-4 py-3 text-center font-semibold text-blue-700 transition hover:bg-blue-50"
+          >
+            Registrarse
+          </a>
+          <a
+            href="/auth/login"
+            className="w-full rounded-lg border border-white/30 px-4 py-3 text-center font-semibold text-white transition hover:bg-white/10"
+          >
+            Iniciar sesión
+          </a>
+        </div>
       </div>
     </div>
   );
 }`}
         />
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            <code>auth0.getSession()</code> lee la cookie de sesión en el servidor.
+            No expone nada sensible al cliente.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">📄</span>
-          3. Página de logout personalizada (opcional)
+          <span className="section-icon">✂️</span>
+          3. Lo que NO necesitas crear
         </h2>
         <p className="section-paragraph">
-          Puedes crear una página de logout que redirija a Auth0. Crea <code>app/logout/page.tsx</code>:
+          En versiones viejas del SDK (v3) o en tutoriales de la competencia verás
+          estos archivos. <strong>No los crees</strong>:
         </p>
-        <CodeBlock
-          code={`"use client";
-import { useEffect } from "react";
-
-export default function LogoutPage() {
-  useEffect(() => {
-    // Redirigir automáticamente a Auth0 para cerrar sesión
-    window.location.href = "/api/auth/logout";
-  }, []);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-900">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-white">Cerrando sesión...</p>
-      </div>
-    </div>
-  );
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">🧩</span>
-          4. Componentes reutilizables
-        </h2>
-        <p className="section-paragraph">
-          Crea componentes reutilizables para manejar el estado de autenticación:
-        </p>
-        <CodeBlock
-          code={`"use client";
-import { useUser } from "@auth0/nextjs-auth0/client";
-import { Button } from "@/components/ui/Button";
-
-export default function AuthStatus() {
-  const { user, isLoading } = useUser();
-
-  if (isLoading) {
-    return <div className="text-gray-400">Cargando...</div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center gap-4">
-        <span className="text-gray-400">No autenticado</span>
-        <Button
-          variant="primary"
-          onClick={() => (window.location.href = "/api/auth/login")}
-        >
-          Iniciar sesión
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-4">
-      <img
-        src={user.picture}
-        alt={user.name}
-        className="rounded-full w-8 h-8"
-      />
-      <span className="text-white">{user.name}</span>
-      <Button
-        variant="secondary"
-        onClick={() => (window.location.href = "/api/auth/logout")}
-      >
-        Cerrar sesión
-      </Button>
-    </div>
-  );
-}`}
-        />
+        <ul className="list-disc pl-6 text-gray-300 space-y-2">
+          <li><code>app/login/page.tsx</code> y <code>app/register/page.tsx</code> – el login/registro es de Auth0.</li>
+          <li><code>app/logout/page.tsx</code> – el logout es un simple enlace a <code>/auth/logout</code>.</li>
+          <li><code>components/ui/Button.tsx</code>, <code>Input.tsx</code> – no hay formularios propios.</li>
+          <li><code>components/auth/*</code> – los componentes con <code>useUser</code> son opcionales; para esta app no hacen falta.</li>
+        </ul>
       </section>
     </>
   );

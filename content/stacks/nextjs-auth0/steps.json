@@ -1,8 +1,9 @@
 [
   { "slug": "01-inicio", "title": "Inicio - Instalación", "order": 1 },
   { "slug": "02-configuracion", "title": "Configuración de Auth0", "order": 2 },
-  { "slug": "03-auth-actions", "title": "Hooks y Componentes de Auth0", "order": 3 },
+  { "slug": "03-auth-actions", "title": "Cliente Auth0 y Proxy", "order": 3 },
   { "slug": "04-frontend", "title": "Páginas de Autenticación", "order": 4 },
-  { "slug": "05-dashboard-perfil", "title": "Dashboard y Perfil Protegido", "order": 5 },
-  { "slug": "06-google-oauth", "title": "Login con Google (OAuth)", "order": 6 }
+  { "slug": "05-dashboard-perfil", "title": "Dashboard Protegido", "order": 5 },
+  { "slug": "06-google-oauth", "title": "Login con Google (OAuth)", "order": 6 },
+  { "slug": "07-personalizacion", "title": "Personalizar Apariencia y Campos", "order": 7 }
 ]
