@@ -14,133 +14,214 @@ export default function GoogleOAuth() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🔑</span>
-          1. Instalación de Arctic
+          1. Variables de entorno y instalación
         </h2>
+        <p className="section-paragraph">Instala <code>arctic</code> (OAuth2 para Lucia):</p>
         <CommandBlock command="npm install arctic" />
-        <div className="tip">
-          <span className="tip-icon">📚</span>
-          <span>
-            Arctic es una biblioteca para OAuth2 que Lucia recomienda. Soporta Google, GitHub, Discord, etc.
-          </span>
-        </div>
+        <p className="section-paragraph">Añade a tu <code>.env.local</code>:</p>
+        <CodeBlock
+          code={`# Google OAuth
+GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="tu-client-secret"`}
+        />
+        <p className="section-paragraph">
+          Reinicia el servidor de desarrollo tras añadirlas (las variables de entorno
+          se cargan al arrancar).
+        </p>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🔧</span>
-          2. Configuración del proveedor Google en el servidor
+          2. Configuración en Google Cloud
+        </h2>
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>Ve a <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Google Cloud Console</a>.</li>
+          <li>Crea un proyecto o selecciona uno existente.</li>
+          <li>Ve a <strong>APIs y Servicios → Credenciales</strong>.</li>
+          <li>Crea un <strong>ID de cliente OAuth</strong> de tipo "Aplicación web".</li>
+          <li>
+            En <strong>Orígenes autorizados de JavaScript</strong>, añade:
+            <CodeBlock code="http://localhost:3000" />
+          </li>
+          <li>
+            En <strong>URIs de redireccionamiento autorizados</strong>, añade:
+            <CodeBlock code="http://localhost:3000/api/auth/google/callback" />
+          </li>
+          <li>Copia el <strong>ID de cliente</strong> y <strong>Secreto de cliente</strong> al paso 1.</li>
+        </ol>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">✨</span>
+          3. Proveedor de Google (<code>lib/auth/google.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>lib/auth/google.ts</code> con la configuración de OAuth:
+          Crea la carpeta <code>lib/auth</code> (si no existe) y el archivo{" "}
+          <code>lib/auth/google.ts</code>:
         </p>
         <CodeBlock
           code={`import { Google } from "arctic";
-import { generateId } from "lucia";
-import { db, users, accounts } from "@/lib/db";
-import { lucia } from "@/lib/lucia";
-import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
 
-const google = new Google(
+// Proveedor de Google (arctic). El redirectURI debe coincidir con el registrado
+// en Google Cloud Console y en la URL de callback de tu app.
+export const google = new Google(
   process.env.GOOGLE_CLIENT_ID!,
   process.env.GOOGLE_CLIENT_SECRET!,
   \`\${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback\`
-);
-
-export async function handleGoogleCallback(code: string) {
-  const tokens = await google.validateAuthorizationCode(code);
-  const googleUserResponse = await fetch(
-    "https://openidconnect.googleapis.com/v1/userinfo",
-    {
-      headers: {
-        Authorization: \`Bearer \${tokens.accessToken}\`,
-      },
-    }
-  );
-  const googleUser = await googleUserResponse.json();
-
-  // Buscar cuenta existente por providerUserId
-  let account = await db
-    .select()
-    .from(accounts)
-    .where(eq(accounts.providerUserId, googleUser.sub))
-    .get();
-
-  let user;
-
-  if (account) {
-    user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, account.userId))
-      .get();
-  } else {
-    // Crear nuevo usuario
-    const userId = generateId(15);
-    await db.insert(users).values({
-      id: userId,
-      name: googleUser.name || googleUser.email.split("@")[0],
-      email: googleUser.email,
-      emailVerified: true,
-      avatarUrl: googleUser.picture,
-    });
-
-    await db.insert(accounts).values({
-      id: generateId(15),
-      userId,
-      providerId: "google",
-      providerUserId: googleUser.sub,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || null,
-      expiresAt: tokens.accessTokenExpiresAt || null,
-    });
-
-    user = await db.select().from(users).where(eq(users.id, userId)).get();
-  }
-
-  // Crear sesión
-  const session = await lucia.createSession(user.id, {});
-  const sessionCookie = lucia.createSessionCookie(session.id);
-  const cookieStore = await cookies();
-  cookieStore.set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes
-  );
-}
-
-export async function getGoogleAuthURL() {
-  return google.createAuthorizationURL();
-}`}
+);`}
         />
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🌐</span>
-          3. API Route para el callback de Google
+          4. Ruta que inicia el flujo (<code>app/api/auth/google/route.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>app/api/auth/google/callback/route.ts</code>:
+          Genera el <code>state</code> y <code>codeVerifier</code> (protección CSRF +
+          PKCE), los guarda en cookies y redirige a Google:
         </p>
         <CodeBlock
-          code={`import { handleGoogleCallback } from "@/lib/auth/google";
-import { NextRequest, NextResponse } from "next/server";
+          code={`import { cookies } from "next/headers";
+import { generateState, generateCodeVerifier } from "arctic";
+import { google } from "@/lib/auth/google";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
+  const state = generateState();
+  const codeVerifier = generateCodeVerifier();
+  const scopes = ["openid", "profile", "email"];
+
+  const url = google.createAuthorizationURL(state, codeVerifier, scopes);
+
+  // Guardar state y codeVerifier en cookies httpOnly para validarlos en el callback
+  const cookieStore = await cookies();
+  cookieStore.set("google_oauth_state", state, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 10, // 10 minutos
+  });
+  cookieStore.set("google_oauth_code_verifier", codeVerifier, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 10,
+  });
+
+  return Response.redirect(url);
+}`}
+        />
+        <div className="tip">
+          <span className="tip-icon">🔒</span>
+          <span>
+            En arctic v3 (a diferencia de v1) el flujo usa <strong>PKCE</strong>:{" "}
+            <code>createAuthorizationURL(state, codeVerifier, scopes)</code> y luego{" "}
+            <code>validateAuthorizationCode(code, codeVerifier)</code>. Sin guardar
+            el <code>codeVerifier</code> en una cookie, el callback falla.
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔁</span>
+          5. Callback de Google (<code>app/api/auth/google/callback/route.ts</code>) — archivo completo
+        </h2>
+        <p className="section-paragraph">
+          Valida el <code>state</code> y el código, busca o crea el usuario, crea la
+          sesión de Lucia y redirige al dashboard:
+        </p>
+        <CodeBlock
+          code={`import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
+import { generateId } from "lucia";
+import { google } from "@/lib/auth/google";
+import { db, users, accounts } from "@/lib/db";
+import { lucia } from "@/lib/lucia";
+
+export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
 
-  if (!code) {
-    return NextResponse.redirect(new URL("/login?error=missing_code", request.url));
+  const cookieStore = await cookies();
+  const storedState = cookieStore.get("google_oauth_state")?.value;
+  const codeVerifier = cookieStore.get("google_oauth_code_verifier")?.value;
+
+  // Validar que el state coincida (protección CSRF)
+  if (!code || !state || !storedState || state !== storedState || !codeVerifier) {
+    return Response.redirect(new URL("/login?error=invalid_oauth", request.url));
   }
 
   try {
-    await handleGoogleCallback(code);
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const tokens = await google.validateAuthorizationCode(code, codeVerifier);
+
+    // Obtener el perfil de Google
+    const userResponse = await fetch(
+      "https://openidconnect.googleapis.com/v1/userinfo",
+      {
+        headers: {
+          Authorization: \`Bearer \${tokens.accessToken()}\`,
+        },
+      }
+    );
+    const googleUser = await userResponse.json();
+
+    // Buscar si ya existe una cuenta vinculada a este Google
+    const existingAccount = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.providerUserId, googleUser.sub))
+      .get();
+
+    let userId: string;
+
+    if (existingAccount) {
+      userId = existingAccount.userId;
+    } else {
+      // Crear usuario nuevo (o vincular si el email ya existe)
+      const existingUser = googleUser.email
+        ? await db.select().from(users).where(eq(users.email, googleUser.email)).get()
+        : null;
+
+      userId = existingUser?.id ?? generateId(15);
+
+      if (!existingUser) {
+        await db.insert(users).values({
+          id: userId,
+          email: googleUser.email,
+          name: googleUser.name ?? googleUser.email.split("@")[0],
+        });
+      }
+
+      await db.insert(accounts).values({
+        id: generateId(15),
+        userId,
+        providerId: "google",
+        providerUserId: googleUser.sub,
+        accessToken: tokens.accessToken(),
+        refreshToken: tokens.hasRefreshToken() ? tokens.refreshToken() : null,
+        expiresAt: tokens.accessTokenExpiresAt(),
+      });
+    }
+
+    // Crear sesión de Lucia
+    const session = await lucia.createSession(userId, {});
+    const sessionCookie = lucia.createSessionCookie(session.id);
+    cookieStore.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+
+    // Limpiar cookies temporales de OAuth
+    cookieStore.delete("google_oauth_state");
+    cookieStore.delete("google_oauth_code_verifier");
+
+    return Response.redirect(new URL("/dashboard", request.url));
   } catch (error) {
-    console.error("Error en OAuth de Google:", error);
-    return NextResponse.redirect(new URL("/login?error=google_auth_failed", request.url));
+    console.error("Error en callback de Google:", error);
+    return Response.redirect(new URL("/login?error=google_auth_failed", request.url));
   }
 }`}
         />
@@ -149,42 +230,25 @@ export async function GET(request: NextRequest) {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🧩</span>
-          4. Botón de Google en el frontend
+          6. Botón de Google (<code>components/auth/GoogleLoginButton.tsx</code>) — archivo completo
         </h2>
+        <p className="section-paragraph">
+          Crea el Client Component y añádelo a tu página de login:
+        </p>
         <CodeBlock
           code={`"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
 
-export default function GoogleLoginButton() {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/google");
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No se pudo obtener la URL de autenticación");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Error al iniciar sesión con Google");
-      setLoading(false);
-    }
+export function GoogleLoginButton() {
+  const handleGoogleLogin = () => {
+    // Redirigir al route handler que inicia el flujo OAuth
+    window.location.href = "/api/auth/google";
   };
 
   return (
-    <Button
-      variant="outline"
+    <button
+      type="button"
       onClick={handleGoogleLogin}
-      disabled={loading}
-      className="w-full flex items-center justify-center gap-2"
+      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-semibold transition hover:bg-gray-100 dark:border-white/10 dark:hover:bg-white/10"
     >
       <svg className="h-4 w-4" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -192,23 +256,35 @@ export default function GoogleLoginButton() {
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      {loading ? "Cargando..." : "Continuar con Google"}
-    </Button>
+      Continuar con Google
+    </button>
   );
 }`}
         />
         <p className="section-paragraph">
-          También necesitas crear la ruta <code>app/api/auth/google/route.ts</code> para devolver la URL de autenticación:
+          Y en tu <code>app/login/page.tsx</code>, importa y renderiza el botón debajo
+          del formulario:
         </p>
         <CodeBlock
-          code={`import { getGoogleAuthURL } from "@/lib/auth/google";
-import { NextResponse } from "next/server";
+          code={`import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 
-export async function GET() {
-  const url = await getGoogleAuthURL();
-  return NextResponse.json({ url });
-}`}
+// Dentro del componente LoginPage, después del </form>:
+<GoogleLoginButton />`}
         />
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔄</span>
+          7. Cómo funciona el flujo
+        </h2>
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>El usuario hace clic en el botón → redirige a <code>/api/auth/google</code>.</li>
+          <li>Esa ruta genera <code>state</code> + <code>codeVerifier</code>, los guarda en cookies y redirige a Google.</li>
+          <li>Google autentica y vuelve a <code>/api/auth/google/callback?code=...&state=...</code>.</li>
+          <li>El callback valida el <code>state</code> (CSRF) y el código (PKCE), busca o crea el usuario y la cuenta OAuth.</li>
+          <li>Se crea la sesión de Lucia y se redirige a <code>/dashboard</code>.</li>
+        </ol>
       </section>
     </>
   );

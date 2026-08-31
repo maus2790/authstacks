@@ -7,114 +7,81 @@ export default function AuthActions() {
       <header className="content-header">
         <h1 className="content-title">Server Actions de Autenticación</h1>
         <p className="content-subtitle">
-          Login, registro, recuperación y gestión de perfil con Lucia
+          Registro, login, logout y lectura de sesión con Lucia
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📡</span>
-          1. Acciones principales de autenticación
+          1. Todas las acciones en un archivo (<code>actions/auth.ts</code>)
         </h2>
         <p className="section-paragraph">
-          Crea <code>actions/auth/auth.ts</code> con las siguientes funciones:
+          Las Server Actions validan, crean el usuario, generan la sesión con Lucia y
+          setean la cookie. Usan la firma de <code>useActionState</code>{" "}
+          <code>(prevState, formData)</code>. Crea <code>actions/auth.ts</code> con
+          este contenido completo:
         </p>
-
-        <h3 className="subsection-title">1.1. Registro</h3>
         <CodeBlock
           code={`"use server";
-import { z } from "zod";
-import { hash } from "bcryptjs";
-import { generateId } from "lucia";
+
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { generateId } from "lucia";
 import { db, users } from "@/lib/db";
 import { lucia } from "@/lib/lucia";
-import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 
-const registerSchema = z
-  .object({
-    name: z.string().min(2, "Nombre debe tener al menos 2 caracteres"),
-    email: z.string().email("Correo inválido"),
-    password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres"),
-    confirmPassword: z.string(),
-    terms: z.boolean().refine((val) => val === true, "Debes aceptar los términos"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
+export type ActionState = { error?: string } | undefined;
 
-export async function registerAction(formData: FormData) {
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-  const terms = formData.get("terms") === "on";
+export async function registerAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
-  const result = registerSchema.safeParse({
-    name,
-    email,
-    password,
-    confirmPassword,
-    terms,
-  });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
+  if (!name || name.length < 2) return { error: "El nombre es obligatorio (mín. 2 caracteres)" };
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres" };
 
   const existingUser = await db
     .select()
     .from(users)
     .where(eq(users.email, email))
     .get();
-
-  if (existingUser) {
-    return { error: "Este correo ya está registrado" };
-  }
+  if (existingUser) return { error: "Este correo ya está registrado" };
 
   const userId = generateId(15);
-  const hashedPassword = await hash(password, 10);
+  const hashedPassword = await hashPassword(password);
 
   await db.insert(users).values({
     id: userId,
     name,
     email,
     hashedPassword,
-    emailVerified: false,
   });
 
-  // Crear sesión inmediatamente
+  // Crear sesión y setear la cookie
   const session = await lucia.createSession(userId, {});
   const sessionCookie = lucia.createSessionCookie(session.id);
   const cookieStore = await cookies();
-  cookieStore.set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes
-  );
+  cookieStore.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 
   redirect("/dashboard");
-}`}
-        />
+}
 
-        <h3 className="subsection-title">1.2. Login</h3>
-        <CodeBlock
-          code={`import { compare } from "bcryptjs";
+export async function loginAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
-const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres"),
-});
-
-export async function loginAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-
-  const result = loginSchema.safeParse({ email, password });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (!password) return { error: "La contraseña es obligatoria" };
 
   const user = await db
     .select()
@@ -122,35 +89,20 @@ export async function loginAction(formData: FormData) {
     .where(eq(users.email, email))
     .get();
 
-  if (!user) {
-    return { error: "Credenciales incorrectas" };
-  }
+  if (!user || !user.hashedPassword) return { error: "Credenciales incorrectas" };
 
-  if (!user.hashedPassword) {
-    return { error: "Esta cuenta usa OAuth. Inicia sesión con Google." };
-  }
-
-  const isValid = await compare(password, user.hashedPassword);
-  if (!isValid) {
-    return { error: "Credenciales incorrectas" };
-  }
+  const valid = await verifyPassword(password, user.hashedPassword);
+  if (!valid) return { error: "Credenciales incorrectas" };
 
   const session = await lucia.createSession(user.id, {});
   const sessionCookie = lucia.createSessionCookie(session.id);
   const cookieStore = await cookies();
-  cookieStore.set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes
-  );
+  cookieStore.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 
   redirect("/dashboard");
-}`}
-        />
+}
 
-        <h3 className="subsection-title">1.3. Cerrar sesión</h3>
-        <CodeBlock
-          code={`export async function logoutAction() {
+export async function logoutAction() {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(lucia.sessionCookieName)?.value;
 
@@ -158,150 +110,66 @@ export async function loginAction(formData: FormData) {
     await lucia.invalidateSession(sessionId);
   }
 
-  const sessionCookie = lucia.createBlankSessionCookie();
-  cookieStore.set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes
-  );
+  const blankCookie = lucia.createBlankSessionCookie();
+  cookieStore.set(blankCookie.name, blankCookie.value, blankCookie.attributes);
 
   redirect("/login");
 }`}
         />
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            <code>lucia.createSession(userId, {})</code> crea la sesión en la tabla{" "}
+            <code>sessions</code>, y <code>createSessionCookie</code> devuelve la
+            cookie lista para setear con <code>cookies()</code>. En el logout,{" "}
+            <code>createBlankSessionCookie</code> borra la cookie.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            <strong>Ojo con la firma:</strong> las actions que muestran errores deben
+            recibir <code>prevState</code> como primer argumento (firma de{" "}
+            <code>useActionState</code>). Si las usas directamente en{" "}
+            <code>&lt;form action&gt;</code>, TypeScript falla porque la prop{" "}
+            <code>action</code> de React 19 espera <code>(formData) =&gt; void</code>.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">👤</span>
-          2. Obtener usuario y actualizar perfil
+          2. Leer la sesión (<code>lib/session.ts</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">2.1. Obtener usuario (<code>actions/auth/get-user.ts</code>)</h3>
+        <p className="section-paragraph">
+          Para no repetir la lectura de cookie + validación en cada Server Component,
+          crea una utilidad reutilizable. Crea <code>lib/session.ts</code> con este
+          contenido completo:
+        </p>
         <CodeBlock
-          code={`"use server";
-import { db, users } from "@/lib/db";
+          code={`import { cookies } from "next/headers";
 import { lucia } from "@/lib/lucia";
-import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
 
-export async function getUser() {
+// Devuelve el usuario autenticado o null si no hay sesión.
+// Uso: const user = await getSessionUser();
+export async function getSessionUser() {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(lucia.sessionCookieName)?.value;
 
   if (!sessionId) return null;
 
   const { user } = await lucia.validateSession(sessionId);
-  if (!user) return null;
-
-  const userData = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, user.id))
-    .get();
-
-  return userData;
+  return user;
 }`}
         />
-
-        <h3 className="subsection-title">2.2. Actualizar perfil (<code>actions/auth/update-profile.ts</code>)</h3>
-        <CodeBlock
-          code={`"use server";
-import { z } from "zod";
-import { db, users } from "@/lib/db";
-import { eq } from "drizzle-orm";
-import { getUser } from "./get-user";
-
-const profileSchema = z.object({
-  name: z.string().min(2, "Nombre debe tener al menos 2 caracteres"),
-});
-
-export async function updateProfile(formData: FormData) {
-  const name = formData.get("name") as string;
-  const result = profileSchema.safeParse({ name });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
-
-  const user = await getUser();
-  if (!user) return { error: "No autenticado" };
-
-  await db
-    .update(users)
-    .set({ name, updatedAt: new Date() })
-    .where(eq(users.id, user.id));
-
-  return { success: true };
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">📧</span>
-          3. Recuperación de contraseña
-        </h2>
-        <CodeBlock
-          code={`import { generateId } from "lucia";
-import { verificationTokens } from "@/lib/db/schema";
-
-export async function forgotPasswordAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  // Validar email...
-
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .get();
-
-  if (!user) {
-    return { success: true }; // No revelar si existe o no
-  }
-
-  const token = generateId(32);
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
-
-  await db.insert(verificationTokens).values({
-    id: generateId(15),
-    userId: user.id,
-    token,
-    expiresAt: expiresAt,
-    type: "password_reset",
-  });
-
-  // Enviar email con enlace: /reset-password?token=xxx
-  // ...
-
-  return { success: true };
-}
-
-export async function resetPasswordAction(token: string, formData: FormData) {
-  const password = formData.get("password") as string;
-  // Validar...
-
-  const verification = await db
-    .select()
-    .from(verificationTokens)
-    .where(eq(verificationTokens.token, token))
-    .get();
-
-  if (!verification || verification.expiresAt < new Date()) {
-    return { error: "Token inválido o expirado" };
-  }
-
-  const hashedPassword = await hash(password, 10);
-  await db
-    .update(users)
-    .set({ hashedPassword, updatedAt: new Date() })
-    .where(eq(users.id, verification.userId));
-
-  await db
-    .delete(verificationTokens)
-    .where(eq(verificationTokens.id, verification.id));
-
-  redirect("/login?reset=true");
-}`}
-        />
+        <p className="section-paragraph">
+          <code>lucia.validateSession(sessionId)</code> devuelve{" "}
+          <code>{"{ user, session }"}</code> o <code>{"{ user: null, session: null }"}</code>{" "}
+          si la sesión no es válida o expiró. Con el tipado del paso 2,{" "}
+          <code>user</code> incluye <code>id</code>, <code>email</code> y{" "}
+          <code>name</code>.
+        </p>
       </section>
     </>
   );

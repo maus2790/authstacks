@@ -5,108 +5,182 @@ export default function Frontend() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Componentes UI y Páginas</h1>
+        <h1 className="content-title">Páginas de Login y Registro</h1>
         <p className="content-subtitle">
-          Formularios de autenticación y componentes reutilizables
+          Formularios HTML nativos conectados a las Server Actions
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🧩</span>
-          1. Componentes UI (shadcn/ui)
+          <span className="section-icon">💡</span>
+          1. Enfoque: formularios nativos + useActionState
         </h2>
         <p className="section-paragraph">
-          Asegúrate de tener los componentes básicos de shadcn/ui: <code>Button.tsx</code>, <code>Input.tsx</code>, <code>Card.tsx</code>, etc.
+          No necesitas react-hook-form ni zod: un <code>&lt;form&gt;</code> nativo con{" "}
+          <code>useActionState</code> conecta el formulario con la Server Action, muestra
+          el error devuelto y deshabilita el botón mientras se envía. La validación{" "}
+          <strong>real</strong> ocurre en el servidor (Server Action).
         </p>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📄</span>
-          2. Páginas de autenticación
+          2. Página de Login (<code>app/login/page.tsx</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">Layout de autenticación (<code>app/(auth)/layout.tsx</code>)</h3>
         <CodeBlock
-          code={`export default function AuthLayout({ children }: { children: React.ReactNode }) {
+          code={`"use client";
+import { useActionState } from "react";
+import { loginAction } from "@/actions/auth";
+
+export default function LoginPage() {
+  const [state, formAction, pending] = useActionState(loginAction, undefined);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10"></div>
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-      <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      {children}
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Iniciar sesión</h1>
+
+        <form action={formAction} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          {state?.error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {state.error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {pending ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿No tienes cuenta?{" "}
+          <a href="/register" className="text-blue-600 hover:underline">
+            Regístrate aquí
+          </a>
+        </p>
+      </div>
     </div>
   );
 }`}
         />
+      </section>
 
-        <h3 className="subsection-title">Página de Login (<code>app/(auth)/login/page.tsx</code>)</h3>
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">📄</span>
+          3. Página de Registro (<code>app/register/page.tsx</code>) — archivo completo
+        </h2>
         <CodeBlock
           code={`"use client";
-import { useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "react-hot-toast";
-import { loginAction } from "@/actions/auth/auth";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { useActionState } from "react";
+import { registerAction } from "@/actions/auth";
 
-const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres"),
-});
-
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors }, setError } = useForm({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: any) => {
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("email", data.email);
-    formData.append("password", data.password);
-
-    const result = await loginAction(formData);
-    if (result?.error) {
-      setError("root", { message: result.error });
-      toast.error(result.error);
-      setLoading(false);
-    }
-  };
+export default function RegisterPage() {
+  const [state, formAction, pending] = useActionState(registerAction, undefined);
 
   return (
-    <div className="glass p-8 rounded-2xl w-full max-w-md">
-      <h1 className="text-3xl font-bold text-white text-center mb-6">Iniciar sesión</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Input
-          label="Correo electrónico"
-          type="email"
-          placeholder="tu@email.com"
-          {...register("email")}
-          error={errors.email?.message}
-        />
-        <Input
-          label="Contraseña"
-          type="password"
-          placeholder="••••••••"
-          {...register("password")}
-          error={errors.password?.message}
-        />
-        {errors.root && <p className="text-red-400 text-sm">{errors.root.message}</p>}
-        <Button type="submit" loading={loading} className="w-full">
-          Ingresar
-        </Button>
-      </form>
-      <div className="mt-6 text-center">
-        <Link href="/forgot-password" className="text-white/60 hover:text-white">¿Olvidaste tu contraseña?</Link>
-        <p className="text-white/60 mt-2">
-          ¿No tienes cuenta? <Link href="/register" className="text-cyan-300 hover:underline">Regístrate aquí</Link>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Crear cuenta</h1>
+
+        <form action={formAction} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="mb-1 block text-sm font-medium">
+              Nombre
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              placeholder="Tu nombre"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              placeholder="Mínimo 8 caracteres"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          {state?.error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {state.error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {pending ? "Registrando..." : "Registrarse"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿Ya tienes cuenta?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Inicia sesión
+          </a>
         </p>
       </div>
     </div>
