@@ -2,7 +2,8 @@
   { "slug": "01-inicio", "title": "Inicio - Instalación", "order": 1 },
   { "slug": "02-configuracion", "title": "Configuración de Better Auth", "order": 2 },
   { "slug": "03-auth-actions", "title": "Server Actions de Autenticación", "order": 3 },
-  { "slug": "04-frontend", "title": "Componentes UI y Páginas", "order": 4 },
-  { "slug": "05-dashboard-perfil", "title": "Dashboard, Perfil y Middleware", "order": 5 },
-  { "slug": "06-google-oauth", "title": "Login con Google (OAuth)", "order": 6 }
+  { "slug": "04-frontend", "title": "Páginas de Login y Registro", "order": 4 },
+  { "slug": "05-dashboard-perfil", "title": "Dashboard Protegido y Proxy", "order": 5 },
+  { "slug": "06-recuperacion-password", "title": "Recuperación de Contraseña (Resend)", "order": 6 },
+  { "slug": "07-google-oauth", "title": "Login con Google (OAuth)", "order": 7 }
 ]

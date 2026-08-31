@@ -27,7 +27,8 @@ export const stepComponents: Record<string, Record<string, StepLoader>> = {
     "03-auth-actions": () => import("@/content/stacks/nextjs-better-auth/03-auth-actions"),
     "04-frontend": () => import("@/content/stacks/nextjs-better-auth/04-frontend"),
     "05-dashboard-perfil": () => import("@/content/stacks/nextjs-better-auth/05-dashboard-perfil"),
-    "06-google-oauth": () => import("@/content/stacks/nextjs-better-auth/06-google-oauth"),
+    "06-recuperacion-password": () => import("@/content/stacks/nextjs-better-auth/06-recuperacion-password"),
+    "07-google-oauth": () => import("@/content/stacks/nextjs-better-auth/07-google-oauth"),
   },
   "nextjs-clerk": {
     "01-inicio": () => import("@/content/stacks/nextjs-clerk/01-inicio"),

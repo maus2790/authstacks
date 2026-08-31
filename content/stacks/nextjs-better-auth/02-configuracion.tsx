@@ -7,7 +7,7 @@ export default function Configuracion() {
       <header className="content-header">
         <h1 className="content-title">Configuración de Better Auth</h1>
         <p className="content-subtitle">
-          Variables de entorno, esquema de base de datos y cliente de autenticación
+          Variables de entorno, base de datos, esquema y API de autenticación
         </p>
       </header>
 
@@ -16,99 +16,106 @@ export default function Configuracion() {
           <span className="section-icon">🔐</span>
           1. Variables de entorno (<code>.env.local</code>)
         </h2>
-        <p className="section-paragraph">Crea el archivo <code>.env.local</code> con las siguientes variables:</p>
+        <p className="section-paragraph">Rellena <code>.env.local</code>. Los valores de Turso los obtienes en el dashboard de Turso → tu base de datos → <strong>Settings</strong>:</p>
         <CodeBlock
           code={`# Base de datos (Turso)
 TURSO_DATABASE_URL="libsql://<nombre>.turso.io"
 TURSO_AUTH_TOKEN="<token>"
 
 # Better Auth (secreto para JWT y cookies)
-BETTER_AUTH_SECRET="tu-secreto-super-seguro"  # Genera con: openssl rand -base64 32
+BETTER_AUTH_SECRET="tu-secreto-super-seguro"
 
-# App
+# URL de tu app (la usa el cliente de Better Auth)
 NEXT_PUBLIC_APP_URL="http://localhost:3000"`}
         />
-        <div className="tip">
-          <span className="tip-icon">🔒</span>
-          <span>
-            <strong>BETTER_AUTH_SECRET</strong> debe ser una cadena larga y aleatoria. Puedes generarla con:{' '}
-            <CommandBlock command="openssl rand -base64 32" />
-          </span>
-        </div>
+<div className="tip">
+  <span className="tip-icon">🔒</span>
+  <div>
+    <strong>BETTER_AUTH_SECRET</strong> debe ser una cadena larga y aleatoria. Genérala con:
+    <br />
+    Windows:{' '}
+    <CommandBlock command={`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`} />
+    <br />
+    Linux/macOS:{' '}
+    <CommandBlock command="openssl rand -base64 32" />
+  </div>
+</div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📋</span>
-          2. Esquema de base de datos con Drizzle
+          2. Esquema de base de datos (<code>lib/db/schema.ts</code>)
         </h2>
         <p className="section-paragraph">
-          Crea <code>lib/db/schema.ts</code> con las tablas necesarias para Better Auth:
+          Better Auth v1 necesita <strong>4 tablas con campos exactos</strong>.
+          Puedes generarlas automáticamente con el CLI de Better Auth o copiar este
+          esquema (ya es el que genera el CLI para Drizzle + SQLite):
         </p>
         <CodeBlock
           code={`import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
 
-// Tabla de usuarios
-export const users = sqliteTable("users", {
+export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
-  email: text("email").unique().notNull(),
   name: text("name").notNull(),
-  hashedPassword: text("hashed_password"),
-  emailVerified: integer("email_verified", { mode: "boolean" }).default(false),
-  avatarUrl: text("avatar_url"),
-  role: text("role").default("user"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql\`CURRENT_TIMESTAMP\`)
-    .notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .default(sql\`CURRENT_TIMESTAMP\`)
-    .notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: integer("email_verified", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  image: text("image"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-// Tabla de sesiones
-export const sessions = sqliteTable("sessions", {
+export const session = sqliteTable("session", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
-  token: text("token").unique().notNull(),
   expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql\`CURRENT_TIMESTAMP\`)
-    .notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
 });
 
-// Tabla de cuentas OAuth
-export const accounts = sqliteTable("accounts", {
+export const account = sqliteTable("account", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
+  accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
-  providerUserId: text("provider_user_id").notNull(),
+  issuer: text("issuer").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
-  expiresAt: integer("expires_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql\`CURRENT_TIMESTAMP\`)
-    .notNull(),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp" }),
+  refreshTokenExpiresAt: integer("refresh_token_expires_at", { mode: "timestamp" }),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-// Tabla de tokens de verificación
-export const verificationTokens = sqliteTable("verification_tokens", {
+export const verification = sqliteTable("verification", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
-  token: text("token").unique().notNull(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
   expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  type: text("type").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }),
+  updatedAt: integer("updated_at", { mode: "timestamp" }),
 });`}
         />
-        <p className="section-paragraph">Ejecuta las migraciones:</p>
-        <CommandBlock command="npm run db:generate" />
-        <CommandBlock command="npm run db:push" />
+        <div className="tip">
+          <span className="tip-icon">⚙️</span>
+          <span>
+            Alternativa automática (opcional): instala el CLI y ejecuta{" "}
+            <code>npx @better-auth/cli@latest generate</code> — te crea el archivo{" "}
+            <code>auth-schema.ts</code> con las tablas exactas de tu configuración.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
@@ -125,9 +132,7 @@ const client = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-export const db = drizzle(client);
-
-export * from "./schema";`}
+export const db = drizzle(client);`}
         />
       </section>
 
@@ -149,6 +154,20 @@ export default defineConfig({
   out: "./drizzle",
 });`}
         />
+        <p className="section-paragraph">
+          Crea las tablas en Turso ejecutando el push (si usas scripts propios,
+          añádelos al <code>package.json</code>):
+        </p>
+        <CommandBlock command="npx drizzle-kit push" />
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            Opcional: añade a <code>package.json</code> los scripts{" "}
+            <code>"db:generate": "drizzle-kit generate"</code> y{" "}
+            <code>"db:push": "drizzle-kit push"</code> para no escribir el comando
+            completo cada vez.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
@@ -156,149 +175,114 @@ export default defineConfig({
           <span className="section-icon">✨</span>
           5. Configuración de Better Auth (<code>lib/auth/index.ts</code>)
         </h2>
-        <p className="section-paragraph">
-          Crea el archivo <code>lib/auth/index.ts</code> que configura Better Auth con el adaptador de Drizzle:
-        </p>
         <CodeBlock
           code={`import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "@better-auth/drizzle";
-import { db, users, sessions, accounts, verificationTokens } from "@/lib/db";
+import { nextCookies } from "better-auth/next-js";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   database: drizzleAdapter(db, {
     provider: "sqlite",
-    schema: { users, sessions, accounts, verificationTokens },
+    schema: {
+      user: schema.user,
+      session: schema.session,
+      account: schema.account,
+      verification: schema.verification,
+    },
   }),
-  secret: process.env.BETTER_AUTH_SECRET!,
   emailAndPassword: {
     enabled: true,
-    async sendResetPassword(url, user) {
-      // Enviar correo de restablecimiento
-      console.log(\`Enviar correo a \${user.email} con enlace: \${url}\`);
-    },
   },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-  },
-  session: {
-    cookie: {
-      name: "better-auth-session",
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    },
-    expiresIn: 60 * 60 * 24 * 7, // 7 días
-  },
-  user: {
-    defaultRole: "user",
-    fields: {
-      name: "name",
-      email: "email",
-      avatar: "avatarUrl",
-    },
-  },
-});
-
-export type Session = typeof auth.$Infer.Session;
-export type User = typeof auth.$Infer.User;`}
+  plugins: [nextCookies()],
+});`}
         />
         <div className="tip">
-          <span className="tip-icon">💡</span>
+          <span className="tip-icon">🔑</span>
           <span>
-            Better Auth usa un adaptador para Drizzle que maneja automáticamente las operaciones
-            de base de datos. La configuración es muy flexible y extensible con plugins.
+            <code>BETTER_AUTH_SECRET</code> se lee automáticamente de las variables
+            de entorno — no hay que pasarlo en el código. Las contraseñas se hashean
+            con scrypt (incluido), sin librerías extra. El <code>baseURL</code> evita
+            el warning de Better Auth y es necesario para que los callbacks
+            funcionen.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">🚨</span>
+          <span>
+            <strong>No te saltes <code>nextCookies()</code>.</strong> Sin este plugin,
+            las Server Actions del paso 3 (<code>auth.api.signInEmail</code> etc.)
+            <strong>no guardan la cookie de sesión en el navegador</strong>: el
+            registro crea al usuario, pero al terminar el proxy te manda de vuelta a{" "}
+            <code>/login</code> porque no ve la sesión. El plugin transfiere el{" "}
+            <code>Set-Cookie</code> de la respuesta de Better Auth al{" "}
+            <code>cookies()</code> de Next.js. (Por HTTP directo a{" "}
+            <code>/api/auth/*</code> sí funciona sin él, pero las Server Actions
+            fallan.)
           </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🛡️</span>
-          6. Middleware de protección
+          <span className="section-icon">🔌</span>
+          6. La API Route que lo conecta todo (<code>app/api/auth/[...all]/route.ts</code>)
         </h2>
         <p className="section-paragraph">
-          Crea <code>lib/auth/middleware.ts</code> para manejar la autenticación en el middleware de Next.js:
+          <strong>Este es el archivo más importante</strong>: expone TODAS las rutas
+          de Better Auth (<code>/api/auth/sign-up/email</code>,{" "}
+          <code>/api/auth/sign-in/email</code>, <code>/api/auth/sign-out</code>,{" "}
+          <code>/api/auth/get-session</code>…) bajo un solo handler:
         </p>
         <CodeBlock
-          code={`import { auth } from "./index";
-import { NextRequest } from "next/server";
+          code={`import { toNextJsHandler } from "better-auth/next-js";
+import { auth } from "@/lib/auth";
 
-export async function getSession(request: NextRequest) {
-  const headers = new Headers(request.headers);
-  const cookie = headers.get("cookie") || "";
-  
-  // Obtener sesión de la cookie
-  const sessionCookie = cookie
-    .split("; ")
-    .find((c) => c.startsWith("better-auth-session="))
-    ?.split("=")[1];
-
-  if (!sessionCookie) return null;
-
-  try {
-    // Decodificar y verificar la sesión (Better Auth maneja esto)
-    const session = await auth.api.getSession({
-      headers: new Headers({
-        cookie: \`better-auth-session=\${sessionCookie}\`,
-      }),
-    });
-    return session;
-  } catch (error) {
-    return null;
-  }
-}
-
-export async function authMiddleware(request: NextRequest) {
-  const session = await getSession(request);
-  return session;
-}`}
-        />
-        <p className="section-paragraph">
-          Ahora crea <code>middleware.ts</code> en la raíz para proteger rutas:
-        </p>
-        <CodeBlock
-          code={`import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { authMiddleware } from "@/lib/auth/middleware";
-
-export const runtime = "nodejs";
-
-const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
-const protectedPaths = ["/dashboard", "/profile"];
-
-export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  const isPublic = publicPaths.some((p) => path.startsWith(p));
-  const isProtected = protectedPaths.some((p) => path.startsWith(p));
-
-  const session = await authMiddleware(request);
-
-  if (session && isPublic) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (!session && isProtected) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", path);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};`}
+export const { GET, POST } = toNextJsHandler(auth.handler);`}
         />
         <div className="tip">
-          <span className="tip-icon">🔒</span>
+          <span className="tip-icon">🚨</span>
           <span>
-            Better Auth maneja las sesiones con cookies seguras. El middleware valida la sesión
-            en cada petición y redirige según sea necesario.
+            Sin este archivo, <strong>nada funciona</strong>: todos los endpoints de
+            Better Auth devuelven 404. Es el puente entre tu app y la librería.
           </span>
         </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🖥️</span>
+          7. Cliente para el frontend (<code>lib/auth-client.ts</code>)
+        </h2>
+        <p className="section-paragraph">
+          El cliente se usa en componentes de React (botones de Google, estado de
+          sesión). En esta guía solo lo necesitarás para el login social del paso 6:
+        </p>
+        <CodeBlock
+          code={`import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+});`}
+        />
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔍</span>
+          8. Verificar que la API responde
+        </h2>
+        <p className="section-paragraph">
+          Con el servidor corriendo, visita en el navegador:
+        </p>
+        <CodeBlock code="http://localhost:3000/api/auth/get-session" />
+        <p className="section-paragraph">
+          Debe responder <code>{"{}"}</code> (JSON vacío de sesión) o{" "}
+          <code>{"{ user: ..., session: ... }"}</code> si hay sesión. Si da 404,
+          revisa que la ruta <code>[...all]</code> esté bien creada.
+        </p>
       </section>
     </>
   );

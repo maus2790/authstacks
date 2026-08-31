@@ -146,8 +146,12 @@
   @apply text-xl;
 }
 
-.tip span:last-child {
-  @apply text-sm leading-relaxed;
+.tip > :last-child {
+  @apply min-w-0 text-sm leading-relaxed;
+}
+
+.tip .terminal-block {
+  @apply max-w-full;
 }
 
 /* Contraste en modo claro para contenido de guías (clases heredadas text-gray-*) */
