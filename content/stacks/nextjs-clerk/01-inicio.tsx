@@ -1,6 +1,6 @@
+
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { CommandBlock } from "@/components/ui/CommandBlock";
-import { OsCommandTabs } from "@/components/ui/OsCommandTabs";
 
 export default function Inicio() {
   return (
@@ -11,10 +11,12 @@ export default function Inicio() {
           La forma más rápida de añadir autenticación completa a Next.js
         </p>
         <p className="text-gray-400 mt-4">
-          Clerk es una solución de autenticación como servicio que proporciona componentes
-          pre-construidos, manejo de sesiones, MFA y una integración extremadamente rápida.
-          Este manual te guiará desde <strong>cero</strong> hasta tener un sistema de autenticación
-          completo en minutos.
+          Clerk es una plataforma de autenticación <strong>como servicio</strong>:
+          te da componentes pre-construidos (login, registro, perfil), sesiones,
+          MFA, autenticación social y gestión de usuarios desde el dashboard, sin
+          que escribas formularios ni toques la base de datos. Esta guía usa el{" "}
+          <strong>Clerk CLI</strong>, que instala el SDK, configura el proveedor y
+          deja la app lista en minutos, con código listo para copiar y pegar.
         </p>
       </header>
 
@@ -25,7 +27,7 @@ export default function Inicio() {
         </h2>
         <ul className="list-disc pl-6 text-gray-300 space-y-2">
           <li>
-            <strong>Node.js</strong> (versión 18 o superior) –{' '}
+            <strong>Node.js 20 o superior</strong> –{' '}
             <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Descargar</a>
           </li>
           <li>
@@ -38,34 +40,118 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📦</span>
-          1. Instalación del Proyecto Next.js
+          1. Crear el proyecto Next.js (si no existe)
         </h2>
-        <p className="section-paragraph">Crea un nuevo proyecto Next.js:</p>
         <CommandBlock command="npx create-next-app@latest mi-app --typescript --tailwind --app --no-src-dir" />
         <CommandBlock command="cd mi-app" />
-        <CommandBlock command="npm run dev" />
-        <p className="section-paragraph">Abre el navegador en:</p>
-        <CodeBlock code="http://localhost:3000" />
+        <p className="section-paragraph">
+          Si ya tienes un proyecto Next.js, ve a su raíz y continúa con el paso 2 —
+          el CLI detecta el framework y el gestor de paquetes automáticamente.
+        </p>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">⚡</span>
+          2. El plan de setup (checklist)
+        </h2>
+        <p className="section-paragraph">
+          Antes de ejecutar nada, esto es lo que vamos a hacer:
+        </p>
+        <CodeBlock
+          code={`1. Instalar o actualizar el Clerk CLI
+2. Iniciar sesión en tu cuenta de Clerk
+3. Inicializar Clerk en el proyecto (instala @clerk/nextjs y configura todo)
+4. Verificar el matcher del proxy de Next.js
+5. Añadir los controles de autenticación (Sign in / Sign up / UserButton)
+6. Iniciar la app y probar el flujo`}
+        />
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🛠️</span>
+          3. Instalar o actualizar el Clerk CLI
+        </h2>
+        <p className="section-paragraph">
+          Comprueba si el CLI ya está disponible y su versión:
+        </p>
+        <CommandBlock command="clerk --version" />
+        <p className="section-paragraph">Si está instalado, actualízalo:</p>
+        <CommandBlock command="clerk update --yes" />
+        <p className="section-paragraph">
+          Si no está instalado, instálalo con tu gestor preferido (por defecto, npm):
+        </p>
+        <CommandBlock command="npm install -g clerk" />
         <div className="tip">
           <span className="tip-icon">💡</span>
-          <span>Selecciona las opciones por defecto durante la instalación.</span>
+          <span>
+            Equivalente con otros gestores: <code>pnpm install -g clerk</code>,{" "}
+            <code>yarn global add clerk</code>, <code>bun add -g clerk</code>.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">👤</span>
-          2. Instalación de Clerk
+          <span className="section-icon">🔑</span>
+          4. Iniciar sesión en Clerk
         </h2>
-        <p className="section-paragraph">Instala el paquete de Clerk para Next.js:</p>
-        <CommandBlock command="npm install @clerk/nextjs" />
+        <p className="section-paragraph">
+          Inmediatamente después de instalar o actualizar el CLI, ejecuta desde la
+          raíz del proyecto:
+        </p>
+        <CommandBlock command="clerk auth login" />
+        <p className="section-paragraph">
+          Se abrirá el navegador para que completes el login con tu cuenta de Clerk.
+          El CLI queda autenticado y listo para inicializar. (Si ya habías iniciado
+          sesión antes, este comando no pregunta nada.)
+        </p>
         <div className="tip">
-          <span className="tip-icon">📚</span>
+          <span className="tip-icon">⚠️</span>
           <span>
-            <strong>¿Qué es Clerk?</strong><br />
-            Clerk es una plataforma de autenticación y gestión de usuarios que ofrece
-            componentes listos para usar, manejo de sesiones, autenticación social,
-            MFA y más. Se integra perfectamente con Next.js App Router.
+            <code>clerk auth login</code> es <strong>siempre</strong> el primer
+            comando tras instalar el CLI. No intentes listar apps ni inicializar
+            antes de autenticarte.
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🚀</span>
+          5. Inicializar Clerk en el proyecto
+        </h2>
+        <p className="section-paragraph">
+          En un proyecto existente, ejecuta (si ya tienes una aplicación en Clerk,
+          pásale su ID con <code>--app</code> para vincularla):
+        </p>
+        <CommandBlock command="clerk init" />
+        <p className="section-paragraph">O vinculando una app específica:</p>
+        <CommandBlock command="clerk init --app app_XXXXXXXXXXXX" />
+        <p className="section-paragraph">
+          <code>clerk init</code> detecta el framework (Next.js) y el gestor de
+          paquetes (npm/pnpm/yarn/bun), instala <code>@clerk/nextjs</code> y aplica
+          el setup: <code>ClerkProvider</code> en el layout, el{" "}
+          <code>proxy.ts</code>, las variables de entorno y (si la app está vacía)
+          las páginas de ejemplo. <strong>No</strong> pases{" "}
+          <code>--framework</code> ni <code>--pm</code> en proyectos existentes.
+        </p>
+        <div className="tip">
+          <span className="tip-icon">🔧</span>
+          <span>
+            Gestor detectado por lockfile: <code>pnpm-lock.yaml</code> → pnpm,{" "}
+            <code>yarn.lock</code> → yarn, <code>bun.lock</code> → bun,{" "}
+            <code>package-lock.json</code> → npm. Sin lockfile y sin preferencia →
+            npm.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            En un directorio vacío, el CLI pregunta framework y gestor. Sin
+            preferencia: Next.js + npm, con{" "}
+            <code>clerk init --framework next --pm npm</code>.
           </span>
         </div>
       </section>
@@ -73,46 +159,43 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📁</span>
-          3. Estructura de Carpetas y Archivos
+          7. Qué archivos genera <code>clerk init</code>
         </h2>
         <p className="section-paragraph">
-          A diferencia de otros stacks, Clerk requiere muy pocos archivos manuales.
-          La mayor parte de la autenticación está manejada por Clerk.
+          Al terminar, el CLI deja esta estructura mínima (los archivos con * los
+          completamos en los próximos pasos):
         </p>
-
-        <h3 className="subsection-title">⚡ Comandos para crear la estructura</h3>
-        <OsCommandTabs
-          windowsCode={`# Crear carpetas principales
-New-Item -ItemType Directory -Path "app/dashboard" -Force
-New-Item -ItemType Directory -Path "app/profile" -Force
-New-Item -ItemType Directory -Path "components/ui" -Force
-
-# Crear archivos básicos
-New-Item -ItemType File -Path "app/dashboard/page.tsx" -Force
-New-Item -ItemType File -Path "app/profile/page.tsx" -Force
-New-Item -ItemType File -Path "components/ui/Button.tsx" -Force
-New-Item -ItemType File -Path "middleware.ts" -Force
-New-Item -ItemType File -Path ".env.local" -Force
-
-Write-Host "✅ Estructura creada!" -ForegroundColor Green`}
-          linuxCode={`# Crear carpetas principales
-mkdir -p app/dashboard
-mkdir -p app/profile
-mkdir -p components/ui
-
-# Crear archivos básicos
-touch app/dashboard/page.tsx
-touch app/profile/page.tsx
-touch components/ui/Button.tsx
-touch middleware.ts
-touch .env.local
-
-echo "✅ Estructura creada!"`}
+        <CodeBlock
+          code={`mi-app/
+├── app/
+│   ├── sign-in/[[...sign-in]]/page.tsx  ← Página de login (SignIn)
+│   ├── sign-up/[[...sign-up]]/page.tsx  ← Página de registro (SignUp)
+│   ├── layout.tsx                       ← Envuelve todo en <ClerkProvider>
+│   └── page.tsx                         ← Home con botones Sign in / Sign up
+├── proxy.ts                             ← clerkMiddleware() + matcher /__clerk
+└── .env.local                           ← Tus claves de Clerk (las rellena el CLI)`}
         />
+        <div className="tip">
+          <span className="tip-icon">🎯</span>
+          <span>
+            A diferencia de otras bibliotecas, <strong>no hay</strong> tablas de
+            usuarios, ni Server Actions de login, ni hash de contraseñas: Clerk
+            gestiona todo eso en su nube. Tu código solo renderiza componentes y
+            lee la sesión.
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🧪</span>
+          6. Verificar con <code>clerk doctor</code>
+        </h2>
         <p className="section-paragraph">
-          Clerk automáticamente maneja las páginas de login, registro y recuperación,
-          por lo que no necesitas crearlas manualmente a menos que quieras personalizarlas.
+          Tras inicializar, ejecuta el diagnóstico del CLI:
         </p>
+        <CommandBlock command="clerk doctor" />
+        <p className="section-paragraph">Arregla cualquier problema que reporte y continúa con los pasos siguientes.</p>
       </section>
     </>
   );

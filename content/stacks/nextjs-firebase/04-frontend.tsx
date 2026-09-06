@@ -5,273 +5,299 @@ export default function Frontend() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Componentes UI y Páginas</h1>
+        <h1 className="content-title">Páginas de Login y Registro</h1>
         <p className="content-subtitle">
-          Formularios de autenticación, layouts y componentes reutilizables
+          Formularios que autentican con el SDK web y crean la sesión
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🧩</span>
-          1. Componentes UI (shadcn/ui)
+          <span className="section-icon">💡</span>
+          1. Cómo funcionan los formularios
         </h2>
         <p className="section-paragraph">
-          Asegúrate de tener los componentes básicos de shadcn/ui: <code>button.tsx</code>,{' '}
-          <code>input.tsx</code>, <code>form.tsx</code>, <code>label.tsx</code>, <code>card.tsx</code>, etc.
+          A diferencia de las bibliotecas que has visto, aquí el login NO ocurre en
+          una Server Action con email/password: Firebase valida las contraseñas con
+          su SDK <strong>web</strong> en el navegador. El flujo de cada formulario:
         </p>
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>El usuario envía el formulario.</li>
+          <li>
+            <code>signInWithEmailAndPassword</code> (o{" "}
+            <code>createUserWithEmailAndPassword</code>) autentica contra Firebase.
+          </li>
+          <li>Se obtiene el <code>idToken</code> del usuario autenticado.</li>
+          <li>Se llama a <code>createSessionAction</code> para crear la cookie de sesión.</li>
+          <li>Redirección a <code>/dashboard</code>.</li>
+        </ol>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📄</span>
-          2. Páginas de autenticación
+          2. Página de Login (<code>app/login/page.tsx</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">Layout de autenticación (<code>app/(auth)/layout.tsx</code>)</h3>
-        <CodeBlock
-          code={`export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10"></div>
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-      <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      {children}
-    </div>
-  );
-}`}
-        />
-
-        <h3 className="subsection-title">Página de Login (<code>app/(auth)/login/page.tsx</code>)</h3>
         <CodeBlock
           code={`"use client";
 import { useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+import { getClientAuth } from "@/lib/firebase/client";
+import { createSessionAction } from "@/actions/auth";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  });
 
-  const onSubmit = async (data: LoginForm) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
     try {
-      // 1. Iniciar sesión con Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const idToken = await userCredential.user.getIdToken();
+      // 1. Autenticar con Firebase Auth (SDK web) -> obtiene idToken
+      const auth = getClientAuth();
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await credential.user.getIdToken();
 
-      // 2. Intercambiar token por cookie de sesión
-      const response = await fetch("/api/auth/callback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
+      // 2. Intercambiar el idToken por una session cookie en el servidor
+      const sessionForm = new FormData();
+      sessionForm.append("idToken", idToken);
+      const result = await createSessionAction(undefined, sessionForm);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al crear sesión");
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
       }
 
-      toast.success("Inicio de sesión exitoso");
       router.push("/dashboard");
       router.refresh();
-    } catch (error: any) {
-      let errorMessage = error.message;
-      if (errorMessage.includes("user-not-found") || errorMessage.includes("wrong-password")) {
-        errorMessage = "Credenciales incorrectas. Verifica tu correo y contraseña.";
-      } else if (errorMessage.includes("too-many-requests")) {
-        errorMessage = "Demasiados intentos. Intenta más tarde.";
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (msg.includes("invalid-credential") || msg.includes("user-not-found")) {
+        setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+      } else if (msg.includes("invalid-api-key")) {
+        setError(
+          "Falta la config web de Firebase (.env.local): revisa NEXT_PUBLIC_FIREBASE_API_KEY."
+        );
+      } else {
+        setError(msg);
       }
-      setError("root", { message: errorMessage });
-      toast.error(errorMessage);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="glass p-8 rounded-2xl w-full max-w-md relative z-10">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Bienvenido</h1>
-        <p className="text-white/60 mt-2">Inicia sesión para continuar</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Iniciar sesión</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div>
-          <Label className="text-white/80">Correo electrónico</Label>
-          <Input
-            type="email"
-            placeholder="tu@email.com"
-            {...register("email")}
-            className="bg-white/10 border-white/20 text-white placeholder-white/50"
-          />
-          {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
 
-        <div>
-          <Label className="text-white/80">Contraseña</Label>
-          <Input
-            type="password"
-            placeholder="••••••••"
-            {...register("password")}
-            className="bg-white/10 border-white/20 text-white placeholder-white/50"
-          />
-          {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
-        </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
 
-        {errors.root && <p className="text-sm text-red-400">{errors.root.message}</p>}
+          {error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {error}
+            </p>
+          )}
 
-        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600">
-          {loading ? "Cargando..." : "Iniciar sesión"}
-        </Button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
 
-      <div className="mt-6 text-center space-y-2">
-        <Link href="/forgot-password" className="text-sm text-white/60 hover:text-white transition">
-          ¿Olvidaste tu contraseña?
-        </Link>
-        <p className="text-white/60 text-sm">
-          ¿No tienes cuenta? <Link href="/register" className="text-cyan-300 hover:underline">Regístrate aquí</Link>
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿No tienes cuenta?{" "}
+          <a href="/register" className="text-blue-600 hover:underline">
+            Regístrate aquí
+          </a>
         </p>
       </div>
     </div>
   );
 }`}
         />
+      </section>
 
-        <h3 className="subsection-title">Página de Registro (<code>app/(auth)/register/page.tsx</code>)</h3>
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">📄</span>
+          3. Página de Registro (<code>app/register/page.tsx</code>) — archivo completo
+        </h2>
         <CodeBlock
           code={`"use client";
 import { useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-const registerSchema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Las contraseñas no coinciden",
-  path: ["confirmPassword"],
-});
-
-type RegisterForm = z.infer<typeof registerSchema>;
+import { getClientAuth } from "@/lib/firebase/client";
+import { createSessionAction } from "@/actions/auth";
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, setError } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
 
-  const onSubmit = async (data: RegisterForm) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const name = String(formData.get("name") ?? "");
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      setLoading(false);
+      return;
+    }
+
     try {
-      // 1. Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await updateProfile(userCredential.user, { displayName: data.name });
+      // 1. Crear usuario en Firebase Auth (SDK web)
+      const auth = getClientAuth();
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(credential.user, { displayName: name });
 
-      // 2. Obtener token y crear sesión
-      const idToken = await userCredential.user.getIdToken();
-      const response = await fetch("/api/auth/callback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
+      // 2. Intercambiar el idToken por una session cookie en el servidor
+      const idToken = await credential.user.getIdToken();
+      const sessionForm = new FormData();
+      sessionForm.append("idToken", idToken);
+      const result = await createSessionAction(undefined, sessionForm);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al crear sesión");
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
       }
 
-      toast.success("¡Registro exitoso! Bienvenido.");
       router.push("/dashboard");
       router.refresh();
-    } catch (error: any) {
-      let errorMessage = error.message;
-      if (errorMessage.includes("email-already-in-use")) {
-        errorMessage = "Este correo ya está registrado.";
-      } else if (errorMessage.includes("weak-password")) {
-        errorMessage = "La contraseña debe tener al menos 6 caracteres.";
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (msg.includes("email-already-in-use")) {
+        setError("Este correo ya está registrado.");
+      } else if (msg.includes("weak-password")) {
+        setError("La contraseña debe tener al menos 6 caracteres.");
+      } else if (msg.includes("invalid-api-key")) {
+        setError(
+          "Falta la config web de Firebase (.env.local): revisa NEXT_PUBLIC_FIREBASE_API_KEY."
+        );
+      } else {
+        setError(msg);
       }
-      setError("root", { message: errorMessage });
-      toast.error(errorMessage);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="glass p-8 rounded-2xl w-full max-w-md relative z-10">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Crear cuenta</h1>
-        <p className="text-white/60 mt-2">Regístrate para comenzar</p>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Crear cuenta</h1>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="mb-1 block text-sm font-medium">
+              Nombre
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              placeholder="Tu nombre"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Registrando..." : "Registrarse"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿Ya tienes cuenta?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Inicia sesión
+          </a>
+        </p>
       </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <Label className="text-white/80">Nombre completo</Label>
-          <Input type="text" placeholder="Tu nombre" {...register("name")} className="bg-white/10 border-white/20 text-white placeholder-white/50" />
-          {errors.name && <p className="text-sm text-red-400">{errors.name.message}</p>}
-        </div>
-        <div>
-          <Label className="text-white/80">Correo electrónico</Label>
-          <Input type="email" placeholder="tu@email.com" {...register("email")} className="bg-white/10 border-white/20 text-white placeholder-white/50" />
-          {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
-        </div>
-        <div>
-          <Label className="text-white/80">Contraseña</Label>
-          <Input type="password" placeholder="••••••••" {...register("password")} className="bg-white/10 border-white/20 text-white placeholder-white/50" />
-          {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
-        </div>
-        <div>
-          <Label className="text-white/80">Confirmar contraseña</Label>
-          <Input type="password" placeholder="••••••••" {...register("confirmPassword")} className="bg-white/10 border-white/20 text-white placeholder-white/50" />
-          {errors.confirmPassword && <p className="text-sm text-red-400">{errors.confirmPassword.message}</p>}
-        </div>
-        {errors.root && <p className="text-sm text-red-400">{errors.root.message}</p>}
-        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600">
-          {loading ? "Registrando..." : "Registrarse"}
-        </Button>
-      </form>
-
-      <p className="text-center text-white/60 text-sm mt-6">
-        ¿Ya tienes cuenta? <Link href="/login" className="text-cyan-300 hover:underline">Inicia sesión aquí</Link>
-      </p>
     </div>
   );
 }`}

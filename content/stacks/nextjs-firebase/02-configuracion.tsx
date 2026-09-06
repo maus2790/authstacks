@@ -7,177 +7,178 @@ export default function Configuracion() {
       <header className="content-header">
         <h1 className="content-title">Configuración de Firebase</h1>
         <p className="content-subtitle">
-          Clientes, variables de entorno y middleware
+          Las dos credenciales: App Web (navegador) y cuenta de servicio (servidor)
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔧</span>
-          1. Creación de proyecto en Firebase
+          <span className="section-icon">🧠</span>
+          1. Las DOS credenciales (clave para no confundirse)
+        </h2>
+        <p className="section-paragraph">
+          Firebase usa <strong>dos credenciales distintas</strong>, y la gente suele
+          confundirlas:
+        </p>
+        <CodeBlock
+          code={`┌────────────────────────────┬─────────────────────────────────────┬──────────────────────────────┐
+│                            │ App Web (navegador)              │ Cuenta de servicio (servidor) │
+├────────────────────────────┼─────────────────────────────────┼──────────────────────────────┤
+│ Dónde se usa               │ SDK web (firebase)              │ Admin SDK (firebase-admin)   │
+│ Qué hace                   │ Login/registro del navegador    │ Crear cookie de sesión       │
+│ Cómo obtenerla             │ Ajustes del proyecto -> Tus apps│ Ajustes del proyecto ->      │
+│                            │   -> icono "</>" Web            │   Cuentas de servicio        │
+│ Contiene                   │ apiKey, authDomain, appId...    │ private_key, client_email... │
+│ ¿Es pública?               │ SÍ (va en NEXT_PUBLIC_*)        │ NO (solo en el servidor)     │
+└────────────────────────────┴─────────────────────────────────┴──────────────────────────────┘`}
+        />
+        <div className="tip">
+          <span className="tip-icon">🚨</span>
+          <span>
+            El JSON de <strong>cuenta de servicio</strong> (el que empieza con{" "}
+            <code>{"{ \"type\": \"service_account\" }"}</code>) <strong>NO sirve para
+            el navegador</strong>: es la clave privada del servidor. Para el login
+            del navegador necesitas además la <strong>App Web</strong>, que se crea
+            con el icono <code>&lt;/&gt;</code> en "Tus apps" y te da el objeto{" "}
+            <code>firebaseConfig</code> con la <code>apiKey</code> (pública).
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔑</span>
+          2. Habilitar Authentication
         </h2>
         <ol className="list-decimal pl-6 text-gray-300 space-y-2">
-          <li>Ve a <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Firebase Console</a>.</li>
-          <li>Haz clic en <strong>"Agregar proyecto"</strong> y sigue los pasos.</li>
-          <li>Después de crear el proyecto, haz clic en <strong>"Agregar Firebase a tu app web"</strong>.</li>
-          <li>Registra la aplicación con un nombre (ej. "mi-app").</li>
-          <li>Copia el objeto de configuración de Firebase (claves, etc.).</li>
-          <li>Habilita <strong>Authentication</strong> en el panel: ve a <strong>Authentication → Sign-in methods</strong> y activa <strong>Email/Password</strong> y <strong>Google</strong>.</li>
-          <li>Habilita <strong>Firestore Database</strong> en modo <strong>Test</strong> (para desarrollo).</li>
+          <li>En Firebase Console, entra a tu proyecto.</li>
+          <li>Menú lateral: <strong>Authentication → Empezar</strong> (habilita el producto).</li>
+          <li>Pestaña <strong>Sign-in method</strong> → activa <strong>Email/Password</strong>.</li>
+          <li>Guarda.</li>
         </ol>
         <div className="tip">
           <span className="tip-icon">⚠️</span>
-          <span>En producción, configura reglas de seguridad adecuadas para Firestore y Storage.</span>
+          <span>
+            Sin habilitar Authentication, el Admin SDK responde con un error tipo{" "}
+            <em>"There is no configuration corresponding to the provided
+            identifier"</em>. Habilita el producto primero.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🔐</span>
-          2. Variables de entorno (<code>.env.local</code>)
+          3. Variables de entorno (<code>.env.local</code>) — archivo completo
         </h2>
-        <p className="section-paragraph">Crea el archivo <code>.env.local</code> con las siguientes variables:</p>
+        <p className="section-paragraph">
+          Crea <code>.env.local</code>. La parte 1 (cuenta de servicio) la obtienes
+          en <strong>Ajustes del proyecto → Cuentas de servicio → Generar nueva
+          clave privada</strong>. La parte 2 (app web) en{" "}
+          <strong>Ajustes del proyecto → Tus apps</strong>:
+        </p>
         <CodeBlock
-          code={`# Firebase Client (público)
+          code={`# ============================================================
+# 1) ADMIN SDK (servidor) — de "Cuentas de servicio" (JSON)
+# ============================================================
+FIREBASE_PROJECT_ID="tu-proyecto"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxx@tu-proyecto.iam.gserviceaccount.com"
+# Importante: pega la clave con los \\n ESCAPADOS (tal como vienen en el JSON)
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nMIIE...\\n-----END PRIVATE KEY-----\\n"
+
+# ============================================================
+# 2) SDK WEB (navegador) — de "Tus apps" (objeto firebaseConfig)
+# ============================================================
 NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSy..."
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="mi-app.firebaseapp.com"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID="mi-app"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="mi-app.appspot.com"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="tu-proyecto.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="tu-proyecto"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="tu-proyecto.appspot.com"
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="123456789"
 NEXT_PUBLIC_FIREBASE_APP_ID="1:123456789:web:abcdef"
 
-# Firebase Admin (servidor - privado)
-FIREBASE_PROJECT_ID="mi-app"
-FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxx@mi-app.iam.gserviceaccount.com"
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"`}
+# URL de tu app
+NEXT_PUBLIC_APP_URL="http://localhost:3000"`}
         />
         <div className="tip">
           <span className="tip-icon">🔒</span>
-          <span>La clave privada del Admin SDK debe estar en una variable de entorno y nunca exponerse en el cliente. Para desarrollo, puedes copiarla de la consola de Firebase → Configuración → Cuentas de servicio → Generar nueva clave privada.</span>
+          <span>
+            <code>FIREBASE_PRIVATE_KEY</code> es sensible: solo en{" "}
+            <code>.env.local</code> (gitignored). Mantén los <code>\\n</code>{" "}
+            escapados — el código del paso 4 los convierte en saltos de línea
+            reales. Reinicia <code>npm run dev</code> tras editarlo.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">📦</span>
-          3. Cliente de Firebase (navegador)
+          <span className="section-icon">🖥️</span>
+          4. Admin SDK (<code>lib/firebase/admin.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>lib/firebase/client.ts</code> con el SDK del cliente:
+          Se usa <strong>solo en el servidor</strong> (Server Actions, Server
+          Components). Crea <code>lib/firebase/admin.ts</code>:
         </p>
         <CodeBlock
-          code={`import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+          code={`import { initializeApp, getApps, getApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+// Inicializar el Admin SDK una sola vez (usa tu cuenta de servicio del .env.local)
+const adminApp =
+  getApps().length > 0
+    ? getApp()
+    : initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          // En .env el private key lleva \\n literales -> los convertimos a saltos de línea
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\\\n/g, "\\n"),
+        }),
+      });
 
-// Inicializar Firebase solo una vez
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Clientes para autenticación, base de datos y almacenamiento
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-
-// Configurar persistencia de sesión
-setPersistence(auth, browserLocalPersistence)
-  .then(() => console.log("Persistencia configurada"))
-  .catch((error) => console.error("Error configurando persistencia:", error));
-
-export default app;`}
+export const adminAuth = getAuth(adminApp);
+export default adminApp;`}
         />
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🛡️</span>
-          4. Admin SDK de Firebase (servidor)
+          <span className="section-icon">🌐</span>
+          5. SDK web (<code>lib/firebase/client.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>lib/firebase/admin.ts</code> para usar Firebase en el servidor:
+          Se usa <strong>solo en el navegador</strong>. Importante: se inicializa de
+          forma <strong>perezosa</strong> (dentro de funciones, no al importar) para
+          no romper el prerender estático de Next si las claves faltan. Crea{" "}
+          <code>lib/firebase/client.ts</code>:
         </p>
         <CodeBlock
-          code={`import * as admin from "firebase-admin";
+          code={`"use client";
 
-// Si ya existe una app admin, la reutiliza
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\\\n/g, "\\n"),
-      }),
-    });
-    console.log("Firebase Admin SDK initialized");
-  } catch (error) {
-    console.error("Error initializing Firebase Admin SDK:", error);
-  }
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+
+// Inicialización perezosa: NO se ejecuta al importar (evita romper el
+// prerender estático de Next si las claves faltan o en SSR).
+// Se llama solo dentro de handlers del navegador.
+export function getFirebaseApp(): FirebaseApp {
+  const firebaseConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
+
+  const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+  return app;
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore();
-export const adminStorage = admin.storage();
-export default admin;`}
+export function getClientAuth(): Auth {
+  return getAuth(getFirebaseApp());
+}`}
         />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">🔐</span>
-          5. Middleware de protección
-        </h2>
-        <p className="section-paragraph">
-          Crea <code>middleware.ts</code> en la raíz para proteger rutas del dashboard:
-        </p>
-        <CodeBlock
-          code={`import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getSession } from "@/lib/firebase/auth";
-
-export const runtime = "nodejs";
-
-const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
-const protectedPaths = ["/dashboard", "/profile"];
-
-export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  const isPublic = publicPaths.some((p) => path.startsWith(p));
-  const isProtected = protectedPaths.some((p) => path.startsWith(p));
-
-  // Obtener la sesión del usuario (desde la cookie de Firebase)
-  const session = await getSession();
-
-  if (session && isPublic) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (!session && isProtected) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", path);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};`}
-        />
-        <div className="tip">
-          <span className="tip-icon">💡</span>
-          <span>La función <code>getSession()</code> se implementará en el paso 3 (autenticación).</span>
-        </div>
       </section>
     </>
   );

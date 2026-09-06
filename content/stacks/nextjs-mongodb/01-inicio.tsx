@@ -1,3 +1,4 @@
+
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { CommandBlock } from "@/components/ui/CommandBlock";
 import { OsCommandTabs } from "@/components/ui/OsCommandTabs";
@@ -6,14 +7,17 @@ export default function Inicio() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Next.js + MongoDB</h1>
+        <h1 className="content-title">Next.js + MongoDB Auth</h1>
         <p className="content-subtitle">
-          Guía paso a paso para crear una aplicación con Next.js, MongoDB y Tailwind CSS
+          Login y registro con MongoDB, bcrypt y sesiones JWT
         </p>
         <p className="text-gray-400 mt-4">
-          Este manual te guiará desde <strong>cero</strong> hasta tener un sistema de autenticación
-          completo con Next.js 16, MongoDB, Mongoose ODM y Tailwind CSS. Incluye
-          <strong>todos los archivos</strong>, comandos PowerShell y explicaciones detalladas.
+          MongoDB no es un proveedor de autenticación: es tu <strong>base de
+          datos</strong>. Aquí construyes el auth "a mano", con control total:
+          guardas los usuarios en MongoDB Atlas, hasheas contraseñas con bcrypt y
+          gestionas la sesión con un <strong>JWT en cookie httpOnly</strong>. Esta
+          guía te lleva desde <strong>cero</strong> hasta login + registro +
+          dashboard protegido, con código listo para copiar y pegar.
         </p>
       </header>
 
@@ -24,15 +28,12 @@ export default function Inicio() {
         </h2>
         <ul className="list-disc pl-6 text-gray-300 space-y-2">
           <li>
-            <strong>Node.js</strong> (versión 18 o superior) –{' '}
+            <strong>Node.js 20 o superior</strong> –{' '}
             <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Descargar</a>
           </li>
           <li>
-            <strong>MongoDB</strong> (local o Atlas) –{' '}
-            <a href="https://www.mongodb.com/atlas" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">MongoDB Atlas (gratuito)</a>
-          </li>
-          <li>
-            <strong>PowerShell</strong> (viene con Windows, o puedes usar cualquier terminal)
+            Un cluster <strong>MongoDB Atlas</strong> (plan M0 gratis) –{' '}
+            <a href="https://www.mongodb.com/atlas" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Crear cuenta</a>
           </li>
         </ul>
       </section>
@@ -40,39 +41,32 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📦</span>
-          1. Instalación del Proyecto Next.js
+          1. Crear el proyecto Next.js
         </h2>
-        <p className="section-paragraph">Crea un nuevo proyecto Next.js:</p>
         <CommandBlock command="npx create-next-app@latest mi-app --typescript --tailwind --app --no-src-dir" />
         <CommandBlock command="cd mi-app" />
         <CommandBlock command="npm run dev" />
         <p className="section-paragraph">Abre el navegador en:</p>
         <CodeBlock code="http://localhost:3000" />
-        <div className="tip">
-          <span className="tip-icon">💡</span>
-          <span>Selecciona las opciones por defecto cuando te pregunte durante la instalación.</span>
-        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🍃</span>
-          2. Instalación de dependencias
+          2. Instalar dependencias
         </h2>
-        <p className="section-paragraph">Instala las dependencias necesarias:</p>
-        <CommandBlock command="npm install mongoose bcryptjs jsonwebtoken zod react-hook-form @hookform/resolvers react-hot-toast lucide-react class-variance-authority clsx tailwind-merge" />
-        <p className="section-paragraph">Dependencias de desarrollo:</p>
-        <CommandBlock command="npm install -D @types/bcryptjs @types/jsonwebtoken @types/node" />
+        <CommandBlock command="npm install mongoose bcryptjs jsonwebtoken" />
+        <CommandBlock command="npm install -D @types/bcryptjs @types/jsonwebtoken" />
         <div className="tip">
           <span className="tip-icon">📚</span>
           <span>
             <strong>Explicación:</strong><br />
-            • <code>mongoose</code>: ODM para MongoDB.<br />
-            • <code>bcryptjs</code>: Hash de contraseñas.<br />
-            • <code>jsonwebtoken</code>: Generación y verificación de JWT para sesiones.<br />
-            • <code>zod</code>, <code>react-hook-form</code>: Formularios y validación.<br />
-            • <code>react-hot-toast</code>: Notificaciones.<br />
-            • <code>lucide-react</code>: Iconos.
+            • <code>mongoose</code>: ODM para conectar con MongoDB y definir modelos.<br />
+            • <code>bcryptjs</code>: hash seguro de contraseñas (pure JS, sin compilar).<br />
+            • <code>jsonwebtoken</code>: firma/verificación del JWT de sesión.<br />
+            <br />
+            <strong>No necesitas</strong> react-hook-form, zod ni toast: formularios
+            nativos + estados de React.
           </span>
         </div>
       </section>
@@ -80,101 +74,63 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📁</span>
-          3. Estructura de Carpetas y Archivos
+          3. Estructura de archivos
         </h2>
         <p className="section-paragraph">
-          Crea la siguiente estructura de carpetas y archivos. Ejecuta los comandos según tu sistema operativo.
+          Crea la estructura mínima. <code>app/page.tsx</code> y{" "}
+          <code>app/layout.tsx</code> ya existen del template:
         </p>
 
         <h3 className="subsection-title">⚡ Comandos para crear la estructura</h3>
         <OsCommandTabs
           windowsCode={`# Crear carpetas
-New-Item -ItemType Directory -Path "actions/auth" -Force
-New-Item -ItemType Directory -Path "app/api/auth/session" -Force
-New-Item -ItemType Directory -Path "app/dashboard" -Force
-New-Item -ItemType Directory -Path "app/profile/components" -Force
-New-Item -ItemType Directory -Path "components/auth" -Force
-New-Item -ItemType Directory -Path "components/dashboard" -Force
-New-Item -ItemType Directory -Path "components/ui" -Force
-New-Item -ItemType Directory -Path "context" -Force
-New-Item -ItemType Directory -Path "interfaces" -Force
 New-Item -ItemType Directory -Path "lib/db" -Force
-New-Item -ItemType Directory -Path "models" -Force
-New-Item -ItemType Directory -Path "middleware" -Force
+New-Item -ItemType Directory -Path "actions" -Force
+New-Item -ItemType Directory -Path "app/login" -Force
+New-Item -ItemType Directory -Path "app/register" -Force
+New-Item -ItemType Directory -Path "app/dashboard" -Force
 
-# Crear archivos
-New-Item -ItemType File -Path "actions/auth/auth.ts" -Force
-New-Item -ItemType File -Path "actions/auth/get-user.ts" -Force
-New-Item -ItemType File -Path "actions/auth/update-profile.ts" -Force
-New-Item -ItemType File -Path "app/api/auth/session/route.ts" -Force
-New-Item -ItemType File -Path "app/dashboard/layout.tsx" -Force
-New-Item -ItemType File -Path "app/dashboard/page.tsx" -Force
-New-Item -ItemType File -Path "app/profile/page.tsx" -Force
-New-Item -ItemType File -Path "app/profile/components/AccountForm.tsx" -Force
-New-Item -ItemType File -Path "app/profile/components/UserProfile.tsx" -Force
-New-Item -ItemType File -Path "components/auth/AuthForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/SignInForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/SignUpForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/RecoverPasswordForm.tsx" -Force
-New-Item -ItemType File -Path "components/dashboard/Header.tsx" -Force
-New-Item -ItemType File -Path "components/dashboard/Sidebar.tsx" -Force
-New-Item -ItemType File -Path "components/ui/Button.tsx" -Force
-New-Item -ItemType File -Path "components/ui/Input.tsx" -Force
-New-Item -ItemType File -Path "components/ui/Card.tsx" -Force
-New-Item -ItemType File -Path "context/AuthContext.tsx" -Force
-New-Item -ItemType File -Path "interfaces/user.ts" -Force
+# Crear archivos vacíos (los llenas en los próximos pasos)
 New-Item -ItemType File -Path "lib/db/index.ts" -Force
 New-Item -ItemType File -Path "lib/db/models.ts" -Force
 New-Item -ItemType File -Path "lib/auth.ts" -Force
-New-Item -ItemType File -Path "lib/utils.ts" -Force
-New-Item -ItemType File -Path "middleware.ts" -Force
+New-Item -ItemType File -Path "lib/session.ts" -Force
+New-Item -ItemType File -Path "actions/auth.ts" -Force
+New-Item -ItemType File -Path "app/login/page.tsx" -Force
+New-Item -ItemType File -Path "app/register/page.tsx" -Force
+New-Item -ItemType File -Path "app/dashboard/page.tsx" -Force
+New-Item -ItemType File -Path "proxy.ts" -Force
 New-Item -ItemType File -Path ".env.local" -Force
 
 Write-Host "✅ Estructura creada!" -ForegroundColor Green`}
-    linuxCode={`# Crear carpetas
-mkdir -p actions/auth
-mkdir -p app/api/auth/session
-mkdir -p app/dashboard
-mkdir -p app/profile/components
-mkdir -p components/auth
-mkdir -p components/dashboard
-mkdir -p components/ui
-mkdir -p context
-mkdir -p interfaces
-mkdir -p lib/db
-mkdir -p models
-mkdir -p middleware
+          linuxCode={`# Crear carpetas
+mkdir -p lib/db actions app/login app/register app/dashboard
 
-# Crear archivos
-touch actions/auth/auth.ts
-touch actions/auth/get-user.ts
-touch actions/auth/update-profile.ts
-touch app/api/auth/session/route.ts
-touch app/dashboard/layout.tsx
-touch app/dashboard/page.tsx
-touch app/profile/page.tsx
-touch app/profile/components/AccountForm.tsx
-touch app/profile/components/UserProfile.tsx
-touch components/auth/AuthForm.tsx
-touch components/auth/SignInForm.tsx
-touch components/auth/SignUpForm.tsx
-touch components/auth/RecoverPasswordForm.tsx
-touch components/dashboard/Header.tsx
-touch components/dashboard/Sidebar.tsx
-touch components/ui/Button.tsx
-touch components/ui/Input.tsx
-touch components/ui/Card.tsx
-touch context/AuthContext.tsx
-touch interfaces/user.ts
-touch lib/db/index.ts
-touch lib/db/models.ts
-touch lib/auth.ts
-touch lib/utils.ts
-touch middleware.ts
-touch .env.local
+# Crear archivos vacíos (los llenas en los próximos pasos)
+touch lib/db/index.ts lib/db/models.ts lib/auth.ts lib/session.ts
+touch actions/auth.ts app/login/page.tsx app/register/page.tsx app/dashboard/page.tsx
+touch proxy.ts .env.local
 
 echo "✅ Estructura creada!"`}
-  />
+        />
+        <p className="section-paragraph">La estructura final queda así:</p>
+        <CodeBlock
+          code={`mi-app/
+├── app/
+│   ├── login/page.tsx              ← Login (formulario + Server Action)
+│   ├── register/page.tsx           ← Registro (formulario + Server Action)
+│   ├── dashboard/page.tsx          ← Página protegida
+│   └── page.tsx                    ← (template, se adapta en el paso 5)
+├── actions/
+│   └── auth.ts                     ← Server Actions (registro, login, logout)
+├── lib/
+│   ├── db/index.ts                 ← Conexión a MongoDB (singleton)
+│   ├── db/models.ts                ← Modelo User (Mongoose)
+│   ├── auth.ts                     ← JWT + cookie de sesión
+│   └── session.ts                  ← Lee el usuario autenticado
+├── proxy.ts                        ← Protección de rutas (Next 16)
+└── .env.local                      ← MONGODB_URI + JWT_SECRET`}
+        />
       </section>
     </>
   );

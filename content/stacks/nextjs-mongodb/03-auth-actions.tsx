@@ -5,264 +5,191 @@ export default function AuthActions() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Server Actions de Autenticación</h1>
+        <h1 className="content-title">Sesión JWT y Server Actions</h1>
         <p className="content-subtitle">
-          Login, registro, recuperación y gestión de perfil con MongoDB
+          Cookie httpOnly, registro, login y logout
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">📡</span>
-          1. Acciones principales de autenticación
+          <span className="section-icon">🍪</span>
+          1. JWT y cookie de sesión (<code>lib/auth.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>actions/auth/auth.ts</code> con las siguientes funciones:
+          Al autenticar, firmamos un JWT con el <code>userId</code> y lo guardamos en
+          una cookie <strong>httpOnly</strong>: el navegador no puede leerla, solo el
+          servidor. Crea <code>lib/auth.ts</code>:
         </p>
+        <CodeBlock
+          code={`import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
-        <h3 className="subsection-title">1.1. Login</h3>
+const JWT_SECRET = process.env.JWT_SECRET!;
+const COOKIE_NAME = "auth-token";
+const MAX_AGE = 60 * 60 * 24 * 7; // 7 días
+
+type TokenPayload = { userId: string; email: string };
+
+export function signToken(payload: TokenPayload): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+}
+
+export function verifyToken(token: string): TokenPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+// Crea la sesión: firma el JWT y lo guarda en cookie httpOnly
+export async function createSession(payload: TokenPayload) {
+  const token = signToken(payload);
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: MAX_AGE,
+    path: "/",
+  });
+}
+
+// Lee y verifica la cookie -> devuelve el payload o null
+export async function getSession(): Promise<TokenPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+export async function deleteSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+}`}
+        />
+        <div className="tip">
+          <span className="tip-icon">🔒</span>
+          <span>
+            <code>sameSite: "lax"</code> + <code>httpOnly</code> protege contra CSRF
+            y robo de cookie. En producción <code>secure: true</code> obliga HTTPS.
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">📡</span>
+          2. Server Actions (<code>actions/auth.ts</code>) — archivo completo
+        </h2>
+        <p className="section-paragraph">
+          Registro, login y logout. Usan la firma de <code>useActionState</code>{" "}
+          <code>(prevState, formData)</code>. Crea <code>actions/auth.ts</code> con
+          este contenido completo:
+        </p>
         <CodeBlock
           code={`"use server";
-import { z } from "zod";
-import { compare } from "bcryptjs";
+
 import { redirect } from "next/navigation";
+import { hash, compare } from "bcryptjs";
 import { connectToDatabase } from "@/lib/db";
 import { User } from "@/lib/db/models";
 import { createSession, deleteSession } from "@/lib/auth";
-import { logActivity } from "./log-activity";
 
-const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-});
+export type ActionState = { error?: string } | undefined;
 
-export async function loginAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+export async function registerAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
-  const result = loginSchema.safeParse({ email, password });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
-
-  await connectToDatabase();
-  const user = await User.findOne({ email }).lean();
-
-  if (!user) {
-    return { error: "Credenciales incorrectas" };
-  }
-
-  const isValid = await compare(password, user.passwordHash);
-  if (!isValid) {
-    return { error: "Credenciales incorrectas" };
-  }
-
-  // Crear sesión
-  await createSession(user);
-
-  // Registrar actividad
-  await logActivity({
-    userId: user._id,
-    action: "login",
-    details: "Inicio de sesión exitoso",
-  });
-
-  redirect("/dashboard");
-}`}
-        />
-
-        <h3 className="subsection-title">1.2. Registro</h3>
-        <CodeBlock
-          code={`import { hash } from "bcryptjs";
-import { randomBytes } from "crypto";
-
-const registerSchema = z
-  .object({
-    name: z.string().min(2, "Nombre debe tener al menos 2 caracteres"),
-    email: z.string().email("Correo inválido"),
-    password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres"),
-    confirmPassword: z.string(),
-    terms: z.boolean().refine((val) => val === true, "Debes aceptar los términos"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
-
-export async function registerAction(formData: FormData) {
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-  const terms = formData.get("terms") === "on";
-
-  const result = registerSchema.safeParse({
-    name,
-    email,
-    password,
-    confirmPassword,
-    terms,
-  });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
+  if (!name || name.length < 2) return { error: "El nombre es obligatorio (mín. 2 caracteres)" };
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres" };
 
   await connectToDatabase();
 
   const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return { error: "Este correo ya está registrado" };
-  }
+  if (existingUser) return { error: "Este correo ya está registrado" };
 
-  const hashedPassword = await hash(password, 10);
-  const verificationToken = randomBytes(32).toString("hex");
+  const passwordHash = await hash(password, 10);
+  const user = await User.create({ name, email, passwordHash });
 
-  const newUser = await User.create({
-    name,
-    email,
-    passwordHash: hashedPassword,
-    verificationToken,
-    emailVerified: false,
-    role: "user",
-  });
+  // Crear sesión y redirigir al dashboard
+  await createSession({ userId: user._id.toString(), email: user.email });
+  redirect("/dashboard");
+}
 
-  // Enviar email de verificación (implementar con Resend o similar)
-  // ...
+export async function loginAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
-  await logActivity({
-    userId: newUser._id,
-    action: "register",
-    details: "Nuevo usuario registrado",
-  });
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (!password) return { error: "La contraseña es obligatoria" };
 
-  redirect("/login?registered=true");
-}`}
-        />
+  await connectToDatabase();
 
-        <h3 className="subsection-title">1.3. Cerrar sesión</h3>
-        <CodeBlock
-          code={`export async function logoutAction() {
-  const session = await getSession();
-  if (session?.user) {
-    await logActivity({
-      userId: session.user._id,
-      action: "logout",
-      details: "Cierre de sesión",
-    });
-  }
+  const user = await User.findOne({ email });
+  if (!user) return { error: "Credenciales incorrectas" };
+
+  const valid = await compare(password, user.passwordHash);
+  if (!valid) return { error: "Credenciales incorrectas" };
+
+  await createSession({ userId: user._id.toString(), email: user.email });
+  redirect("/dashboard");
+}
+
+export async function logoutAction() {
   await deleteSession();
   redirect("/login");
 }`}
         />
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            Nunca devuelvas el <code>passwordHash</code> ni lo envíes al cliente.
+            El hash con bcrypt (factor 10) ocurre siempre en el servidor.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">👤</span>
-          2. Obtener usuario y actualizar perfil
+          3. Leer el usuario autenticado (<code>lib/session.ts</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">2.1. Obtener usuario (<code>actions/auth/get-user.ts</code>)</h3>
         <CodeBlock
-          code={`"use server";
-import { getUserFromSession } from "@/lib/auth";
-import { connectToDatabase } from "@/lib/db";
+          code={`import { connectToDatabase } from "@/lib/db";
 import { User } from "@/lib/db/models";
+import { getSession } from "@/lib/auth";
 
-export async function getUser() {
-  const user = await getUserFromSession();
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+// Devuelve los datos del usuario autenticado (nunca el hash) o null.
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const session = await getSession();
+  if (!session) return null;
+
+  await connectToDatabase();
+  const user = await User.findById(session.userId).select("email name").lean();
   if (!user) return null;
 
-  await connectToDatabase();
-  const fullUser = await User.findById(user._id).lean();
-  return fullUser;
-}`}
-        />
-
-        <h3 className="subsection-title">2.2. Actualizar perfil (<code>actions/auth/update-profile.ts</code>)</h3>
-        <CodeBlock
-          code={`"use server";
-import { z } from "zod";
-import { getUserFromSession } from "@/lib/auth";
-import { connectToDatabase } from "@/lib/db";
-import { User } from "@/lib/db/models";
-
-const profileSchema = z.object({
-  name: z.string().min(2, "Nombre debe tener al menos 2 caracteres"),
-});
-
-export async function updateProfile(formData: FormData) {
-  const name = formData.get("name") as string;
-  const result = profileSchema.safeParse({ name });
-  if (!result.success) {
-    return { error: result.error.issues[0].message };
-  }
-
-  const user = await getUserFromSession();
-  if (!user) return { error: "No autenticado" };
-
-  await connectToDatabase();
-  await User.findByIdAndUpdate(user._id, { name });
-
-  return { success: true };
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">📧</span>
-          3. Recuperación de contraseña
-        </h2>
-        <CodeBlock
-          code={`export async function forgotPasswordAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  // Validar email...
-
-  await connectToDatabase();
-  const user = await User.findOne({ email });
-  if (!user) {
-    return { success: true }; // No revelar si existe o no
-  }
-
-  const resetToken = randomBytes(32).toString("hex");
-  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
-
-  await User.findByIdAndUpdate(user._id, {
-    resetToken,
-    resetTokenExpiry,
-  });
-
-  // Enviar email con enlace: /reset-password/[token]
-  // ...
-
-  return { success: true };
-}
-
-export async function resetPasswordAction(token: string, formData: FormData) {
-  const password = formData.get("password") as string;
-  // Validar...
-
-  await connectToDatabase();
-  const user = await User.findOne({
-    resetToken: token,
-    resetTokenExpiry: { $gt: new Date() },
-  });
-  if (!user) {
-    return { error: "Token inválido o expirado" };
-  }
-
-  const hashedPassword = await hash(password, 10);
-  await User.findByIdAndUpdate(user._id, {
-    passwordHash: hashedPassword,
-    resetToken: null,
-    resetTokenExpiry: null,
-  });
-
-  // Eliminar sesiones activas (opcional)
-  // ...
-
-  redirect("/login?reset=true");
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    name: user.name,
+  };
 }`}
         />
       </section>

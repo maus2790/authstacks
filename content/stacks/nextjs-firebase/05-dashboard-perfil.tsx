@@ -5,132 +5,161 @@ export default function DashboardPerfil() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Dashboard, Perfil y Contexto</h1>
+        <h1 className="content-title">Dashboard Protegido y Proxy</h1>
         <p className="content-subtitle">
-          Área protegida, perfil de usuario y contexto global de autenticación
+          Página privada con datos del usuario y protección de rutas
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔐</span>
-          1. Contexto de autenticación (<code>context/AuthContext.tsx</code>)
-        </h2>
-        <CodeBlock
-          code={`"use client";
-import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
-import { getUser } from "@/actions/auth/get-user";
-
-interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Obtener datos adicionales desde el servidor (opcional)
-        const userData = await getUser();
-        setUser(userData || {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}`}
-        />
-        <p className="section-paragraph">
-          Envuelve tu aplicación con <code>AuthProvider</code> en <code>app/layout.tsx</code>.
-        </p>
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
           <span className="section-icon">📊</span>
-          2. Dashboard protegido
+          1. Dashboard como Server Component (<code>app/dashboard/page.tsx</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">Layout del dashboard (<code>app/dashboard/layout.tsx</code>)</h3>
+        <p className="section-paragraph">
+          Lee la cookie con <code>getSessionUser</code> y obtén los datos completos
+          del usuario con <code>adminAuth.getUser</code>. Crea{" "}
+          <code>app/dashboard/page.tsx</code>:
+        </p>
         <CodeBlock
-          code={`import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Header } from "@/components/dashboard/Header";
+          code={`import { redirect } from "next/navigation";
+import { adminAuth } from "@/lib/firebase/admin";
+import { getSessionUser } from "@/lib/firebase/session";
+import { logoutAction } from "@/actions/auth";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardPage() {
+  const session = await getSessionUser();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  // Datos completos del usuario (displayName, photoURL)
+  const user = await adminAuth.getUser(session.uid);
+
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-col flex-1 w-full md:pl-64 h-full">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative">
-          {children}
-        </main>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-lg dark:border-white/10 dark:bg-white/5">
+        {user.photoURL && (
+          <img
+            src={user.photoURL}
+            alt={user.displayName ?? "Usuario"}
+            className="mx-auto mb-4 h-20 w-20 rounded-full"
+          />
+        )}
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Hola, <span className="font-medium">{user.displayName ?? user.email}</span>
+          <br />
+          <span className="text-sm">{user.email}</span>
+        </p>
+
+        <form action={logoutAction} className="mt-8">
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-red-600 px-4 py-3 font-semibold text-white transition hover:bg-red-700"
+          >
+            Cerrar sesión
+          </button>
+        </form>
       </div>
     </div>
   );
 }`}
         />
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            El logout usa un <code>{`<form action={logoutAction}>`}</code>: la Server
+            Action borra la cookie y revoca los tokens de Firebase en el servidor.
+          </span>
+        </div>
+      </section>
 
-        <h3 className="subsection-title">Página principal del dashboard (<code>app/dashboard/page.tsx</code>)</h3>
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🛡️</span>
+          2. Protección global de rutas (<code>proxy.ts</code>) — archivo completo
+        </h2>
+        <p className="section-paragraph">
+          En <strong>Next.js 16</strong>, <code>middleware.ts</code> fue renombrado a{" "}
+          <code>proxy.ts</code>. Aquí solo se comprueba la <strong>presencia</strong>{" "}
+          de la cookie (rápido); la verificación real (firma/expiración) ocurre en el
+          Server Component con el Admin SDK. Crea <code>proxy.ts</code>:
+        </p>
         <CodeBlock
-          code={`"use client";
-import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+          code={`import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default function DashboardPage() {
-  const { user, loading } = useAuth();
+const publicPaths = ["/login", "/register"];
+
+// El proxy solo comprueba si existe la cookie (rápido). La verificación REAL
+// de la sesión ocurre en el Server Component con getSessionUser()
+// (verifySessionCookie del Admin SDK).
+export function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const hasSessionCookie = request.cookies.has("firebase-session");
+
+  // Si no hay cookie de sesión y la ruta es privada -> login
+  if (!hasSessionCookie && !publicPaths.some((p) => path.startsWith(p))) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", path);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Si hay cookie y entra a /login o /register -> dashboard
+  if (hasSessionCookie && publicPaths.some((p) => path.startsWith(p))) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};`}
+        />
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            No se usa firebase-admin en el proxy: el Admin SDK verifica tokens contra
+            Google en cada llamada (lento) y no corre en el runtime del proxy. La
+            presencia de la cookie es una capa de UX; la seguridad real está en el
+            Server Component y las Server Actions.
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🔗</span>
+          3. Actualizar <code>app/page.tsx</code> (home) — archivo completo
+        </h2>
+        <CodeBlock
+          code={`import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/firebase/session";
+
+export default async function Home() {
+  const session = await getSessionUser();
+
+  // Si ya hay sesión, ir directo al dashboard
+  if (session) {
+    redirect("/dashboard");
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in zoom-in duration-500">
-      <div>
-        {loading ? (
-          <div className="h-10 w-64 bg-muted animate-pulse rounded-md" />
-        ) : (
-          <h2 className="text-3xl font-bold tracking-tight">Hola de nuevo, {user?.displayName || 'Usuario'} 👋</h2>
-        )}
-        <p className="text-muted-foreground mt-2">
-          Aquí tienes un resumen general de la actividad de tu sistema.
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Tarjetas de estadísticas... */}
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4 text-center">
+      <h1 className="text-4xl font-bold">Bienvenido</h1>
+      <p className="text-gray-500 dark:text-gray-400">
+        Crea una cuenta o inicia sesión para continuar
+      </p>
+      <div className="flex gap-3">
+        <a href="/register" className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700">
+          Registrarse
+        </a>
+        <a href="/login" className="rounded-lg border border-gray-300 px-6 py-3 font-semibold transition hover:bg-gray-100 dark:border-white/10 dark:hover:bg-white/10">
+          Iniciar sesión
+        </a>
       </div>
     </div>
   );
@@ -140,42 +169,17 @@ export default function DashboardPage() {
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">👤</span>
-          3. Perfil de usuario
+          <span className="section-icon">🧪</span>
+          4. Probar el flujo completo
         </h2>
-
-        <h3 className="subsection-title">Página de perfil (<code>app/profile/page.tsx</code>)</h3>
-        <CodeBlock
-          code={`import React from "react";
-import UserProfile from "./components/UserProfile";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-
-export default function ProfilePage() {
-  return (
-    <div className="flex flex-col justify-center items-center min-h-screen p-4 relative overflow-hidden bg-background">
-      <Link href="/dashboard" className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all z-20 group">
-        <div className="p-2 bg-muted/40 rounded-full group-hover:bg-muted transition-colors">
-          <ArrowLeft size={20} />
-        </div>
-        <span className="font-medium hidden sm:inline-block">Volver al Dashboard</span>
-      </Link>
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-muted-foreground/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="relative z-10 w-full flex justify-center mt-12 md:mt-0">
-        <UserProfile />
-      </div>
-    </div>
-  );
-}`}
-        />
-
-        <h3 className="subsection-title">Componentes del perfil</h3>
-        <p className="section-paragraph">
-          <code>app/profile/components/AccountForm.tsx</code> y{' '}
-          <code>app/profile/components/UserProfile.tsx</code> manejan la edición de perfil.
-          Puedes usar <code>updateProfile</code> de Firebase para actualizar displayName y photoURL.
-        </p>
+        <CommandBlock command="npm run dev" />
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>Abre <code>http://localhost:3000</code> → botones Registrarse / Iniciar sesión.</li>
+          <li>Crea una cuenta en <code>/register</code> → te redirige a <code>/dashboard</code>.</li>
+          <li>El usuario queda visible en <strong>Firebase Console → Authentication → Users</strong>.</li>
+          <li>Visita <code>/dashboard</code> sin sesión → el proxy te manda a <code>/login</code>.</li>
+          <li>Haz clic en <strong>Cerrar sesión</strong> → vuelves a <code>/login</code>.</li>
+        </ol>
       </section>
     </>
   );

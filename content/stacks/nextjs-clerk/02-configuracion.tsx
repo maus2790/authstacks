@@ -7,60 +7,74 @@ export default function Configuracion() {
       <header className="content-header">
         <h1 className="content-title">Configuración de Clerk</h1>
         <p className="content-subtitle">
-          Variables de entorno, proveedor y middleware
+          Variables de entorno, ClerkProvider y proxy
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔑</span>
-          1. Obtener credenciales de Clerk
+          <span className="section-icon">🔐</span>
+          1. Variables de entorno (<code>.env.local</code>) — archivo completo
         </h2>
-        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
-          <li>Ve a <a href="https://dashboard.clerk.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Clerk Dashboard</a>.</li>
-          <li>Crea una nueva aplicación (elige un nombre y selecciona Next.js).</li>
-          <li>En la sección <strong>API Keys</strong>, copia el <strong>Publishable Key</strong> y el <strong>Secret Key</strong>.</li>
-        </ol>
+        <p className="section-paragraph">
+          <code>clerk init</code> crea y rellena tu <code>.env.local</code>
+          automáticamente. Este es el formato que deja (con tus claves reales):
+        </p>
+        <CodeBlock
+          code={`# Clerk (las genera clerk init con los valores de tu aplicación)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_xxxxxxxxxxxxxxxx"
+CLERK_SECRET_KEY="sk_test_xxxxxxxxxxxxxxxx"
+
+# URLs de las páginas de auth (componentes SignIn/SignUp)
+NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
+
+# A dónde redirigir tras autenticarse (fallback)
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL="/"
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL="/"`}
+        />
         <div className="tip">
           <span className="tip-icon">🔒</span>
-          <span>La <strong>Secret Key</strong> es sensible y solo debe usarse en el servidor (variables de entorno).</span>
+          <span>
+            <code>CLERK_SECRET_KEY</code> es <strong>secreta</strong>: nunca la
+            expongas en código de cliente ni la imprimas. La{" "}
+            <code>NEXT_PUBLIC_</code> sí puede estar en el frontend.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">🚨</span>
+          <span>
+            Las variables se cargan al arrancar: <strong>reinicia</strong>{" "}
+            <code>npm run dev</code> si las cambias a mano.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔐</span>
-          2. Variables de entorno (<code>.env.local</code>)
-        </h2>
-        <p className="section-paragraph">Crea el archivo <code>.env.local</code> con las siguientes variables:</p>
-        <CodeBlock
-          code={`# Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_xxxxxxxxxxxx"
-CLERK_SECRET_KEY="sk_test_xxxxxxxxxxxx"
-
-# Clerk URLs (para desarrollo y producción)
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/dashboard"
-
-# App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
           <span className="section-icon">🔌</span>
-          3. Proveedor Clerk (<code>app/layout.tsx</code>)
+          2. Proveedor Clerk (<code>app/layout.tsx</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Envuelve tu aplicación con <code>ClerkProvider</code> en el layout raíz:
+          <code>clerk init</code> envuelve la app con <code>ClerkProvider</code>.
+          Si lo haces a mano, reemplaza <code>app/layout.tsx</code> por este
+          contenido completo:
         </p>
         <CodeBlock
-          code={`import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+          code={`import { ClerkProvider } from "@clerk/nextjs";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Mi App con Clerk",
@@ -69,88 +83,72 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <ClerkProvider>
-      <html lang="es">
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="es" className={\`\${geistSans.variable} \${geistMono.variable}\`}>
+      <body>
+        <ClerkProvider>{children}</ClerkProvider>
+      </body>
+    </html>
   );
 }`}
         />
         <div className="tip">
-          <span className="tip-icon">💡</span>
-          <span><code>ClerkProvider</code> es el proveedor que da acceso a los hooks y componentes de Clerk en toda la aplicación.</span>
-        </div>
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">🛡️</span>
-          4. Middleware de Clerk (<code>middleware.ts</code>)
-        </h2>
-        <p className="section-paragraph">
-          Clerk provee un middleware que automáticamente protege rutas y maneja sesiones.
-          Crea <code>middleware.ts</code> en la raíz con el siguiente código:
-        </p>
-        <CodeBlock
-          code={`import { clerkMiddleware } from "@clerk/nextjs/server";
-
-// Opcional: si quieres rutas públicas, usa la siguiente configuración:
-// export default clerkMiddleware({
-//   publicRoutes: ["/", "/about", "/api/public"],
-// });
-
-// Por defecto, protege todas las rutas excepto las que coinciden con el matcher.
-export default clerkMiddleware();
-
-export const config = {
-  matcher: [
-    // Saltar archivos estáticos, imágenes, etc.
-    "/((?!_next|[^?]*\\\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Siempre ejecutar para rutas API
-    "/(api|trpc)(.*)",
-  ],
-};`}
-        />
-        <div className="tip">
           <span className="tip-icon">⚠️</span>
           <span>
-            El middleware de Clerk protege automáticamente todas las rutas. Para desproteger algunas
-            (como la página de inicio), usa la opción <code>publicRoutes</code> en el objeto de configuración
-            (comentada en el código). Asegúrate de que el <code>matcher</code> excluya los archivos estáticos.
+            <strong><code>ClerkProvider</code> va dentro de <code>&lt;body&gt;</code></strong>
+            , nunca envolviendo <code>&lt;html&gt;</code>. Sin el proveedor, los
+            componentes de Clerk (SignIn, UserButton…) fallan.
           </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">⚙️</span>
-          5. Personalización de páginas (opcional)
+          <span className="section-icon">🛡️</span>
+          3. Proxy de Clerk (<code>proxy.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Clerk genera automáticamente las páginas de login y registro, pero puedes personalizarlas
-          creando tus propios componentes y configurando las rutas. Por ejemplo, para usar una página
-          personalizada de login, crea <code>app/sign-in/[[...sign-in]]/page.tsx</code>:
+          En <strong>Next.js 16</strong>, <code>middleware.ts</code> fue renombrado a{" "}
+          <code>proxy.ts</code>. <code>clerk init</code> crea este archivo; si lo
+          haces a mano, usa este contenido completo:
         </p>
         <CodeBlock
-          code={`import { SignIn } from "@clerk/nextjs";
+          code={`import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export default function SignInPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignIn />
-    </div>
-  );
-}`}
+export default clerkMiddleware();
+
+export const config = {
+  matcher: [
+    // Ignorar archivos estáticos y assets (imágenes, css, etc.)
+    "/((?!_next|[^?]*\\\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Siempre ejecutar para rutas API/trpc
+    "/(api|trpc)(.*)",
+    // Ruta interna de Clerk (sesión en el navegador) — obligatoria en Next 16
+    "/__clerk/:path*",
+  ],
+};`}
         />
-        <p className="section-paragraph">
-          Clerk automáticamente manejará la redirección después del login según las variables
-          de entorno <code>NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL</code>.
-        </p>
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            <strong>No te saltes <code>"/__clerk/:path*"</code></strong>: en
+            Next.js 16 el proxy se ejecuta antes que las rutas, y Clerk usa esa
+            ruta interna para las solicitudes de sesión del navegador. Debe ir
+            <strong> después</strong> de <code>"/(api|trpc)(.*)"</code>.
+          </span>
+        </div>
+        <div className="tip">
+          <span className="tip-icon">🔓</span>
+          <span>
+            Por defecto <code>clerkMiddleware()</code> protege todas las rutas. Para
+            hacer públicas algunas (ej. la home), pásale un objeto con{" "}
+            <code>publicRoutes</code>:{" "}
+            <code>{`clerkMiddleware({ publicRoutes: ["/", "/about"] })`}</code>.
+          </span>
+        </div>
       </section>
     </>
   );

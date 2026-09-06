@@ -1,3 +1,4 @@
+
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { CommandBlock } from "@/components/ui/CommandBlock";
 import { OsCommandTabs } from "@/components/ui/OsCommandTabs";
@@ -6,14 +7,18 @@ export default function Inicio() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Next.js + Firebase</h1>
+        <h1 className="content-title">Next.js + Firebase Auth</h1>
         <p className="content-subtitle">
-          Guía paso a paso para crear una aplicación con Next.js, Firebase y Tailwind CSS
+          Login y registro con Firebase Authentication
         </p>
         <p className="text-gray-400 mt-4">
-          Este manual te guiará desde <strong>cero</strong> hasta tener un sistema de autenticación
-          completo con Next.js 16, Firebase Authentication, Firestore y Tailwind CSS. Incluye
-          <strong>todos los archivos</strong>, comandos PowerShell y explicaciones detalladas.
+          Firebase Authentication se encarga de los usuarios y las contraseñas por
+          ti: hash seguro, verificación de email, bloqueo de cuentas, etc. Tú solo
+          integras <strong>dos SDKs</strong>: el SDK <strong>web</strong> (formularios
+          en el navegador) y el <strong>Admin SDK</strong> (sesiones en el servidor
+          con tu cuenta de servicio). Esta guía te lleva desde <strong>cero</strong>{" "}
+          hasta login + registro + dashboard protegido, con código listo para copiar
+          y pegar.
         </p>
       </header>
 
@@ -24,15 +29,12 @@ export default function Inicio() {
         </h2>
         <ul className="list-disc pl-6 text-gray-300 space-y-2">
           <li>
-            <strong>Node.js</strong> (versión 18 o superior) –{' '}
+            <strong>Node.js 20 o superior</strong> –{' '}
             <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Descargar</a>
           </li>
           <li>
-            <strong>PowerShell</strong> (viene con Windows, o puedes usar cualquier terminal)
-          </li>
-          <li>
-            Una cuenta en <strong>Firebase</strong> (gratuita) –{' '}
-            <a href="https://firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Regístrate</a>
+            Un proyecto en <strong>Firebase</strong> (plan Spark gratis) –{' '}
+            <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Crear proyecto</a>
           </li>
         </ul>
       </section>
@@ -40,40 +42,33 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📦</span>
-          1. Instalación del Proyecto Next.js
+          1. Crear el proyecto Next.js
         </h2>
-        <p className="section-paragraph">Crea un nuevo proyecto Next.js:</p>
         <CommandBlock command="npx create-next-app@latest mi-app --typescript --tailwind --app --no-src-dir" />
         <CommandBlock command="cd mi-app" />
         <CommandBlock command="npm run dev" />
         <p className="section-paragraph">Abre el navegador en:</p>
         <CodeBlock code="http://localhost:3000" />
-        <div className="tip">
-          <span className="tip-icon">💡</span>
-          <span>Selecciona las opciones por defecto cuando te pregunte durante la instalación</span>
-        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">🔥</span>
-          2. Instalación de Firebase
+          2. Instalar los SDKs de Firebase
         </h2>
-        <p className="section-paragraph">Instala el SDK de Firebase para el cliente y el administrador:</p>
+        <p className="section-paragraph">Instala <strong>solo</strong> estas dos dependencias:</p>
         <CommandBlock command="npm install firebase firebase-admin" />
-        <p className="section-paragraph">
-          También necesitarás algunas utilidades adicionales para formularios y notificaciones:
-        </p>
-        <CommandBlock command="npm install react-hook-form zod @hookform/resolvers react-hot-toast lucide-react" />
         <div className="tip">
           <span className="tip-icon">📚</span>
           <span>
             <strong>Explicación:</strong><br />
-            • <code>firebase</code>: SDK del cliente para el navegador.<br />
-            • <code>firebase-admin</code>: SDK del administrador para el servidor (Server Actions, API Routes).<br />
-            • <code>react-hook-form</code>, <code>zod</code>, <code>@hookform/resolvers</code>: Formularios y validación.<br />
-            • <code>react-hot-toast</code>: Notificaciones.<br />
-            • <code>lucide-react</code>: Iconos.
+            • <code>firebase</code>: SDK <strong>web</strong> — corre en el navegador
+            y hace el login/registro contra Firebase Auth.<br />
+            • <code>firebase-admin</code>: SDK <strong>de servidor</strong> — crea la
+            cookie de sesión (session cookie) que protege tus rutas.<br />
+            <br />
+            <strong>No necesitas</strong> react-hook-form, zod ni toast: formularios
+            nativos + estados de React.
           </span>
         </div>
       </section>
@@ -81,120 +76,63 @@ export default function Inicio() {
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📁</span>
-          3. Estructura de Carpetas y Archivos
+          3. Estructura de archivos
         </h2>
         <p className="section-paragraph">
-          Necesitas crear la siguiente estructura de carpetas y archivos. Ejecuta los comandos
-          según tu sistema operativo.
+          Crea la estructura mínima. <code>app/page.tsx</code> y{" "}
+          <code>app/layout.tsx</code> ya existen del template:
         </p>
 
         <h3 className="subsection-title">⚡ Comandos para crear la estructura</h3>
-
         <OsCommandTabs
-          windowsCode={`# Crear estructura de carpetas
-New-Item -ItemType Directory -Path "actions/auth" -Force
-New-Item -ItemType Directory -Path "app/api/auth/callback" -Force
-New-Item -ItemType Directory -Path "app/api/auth/signout" -Force
-New-Item -ItemType Directory -Path "app/dashboard" -Force
-New-Item -ItemType Directory -Path "app/profile/components" -Force
-New-Item -ItemType Directory -Path "app/update-password" -Force
-New-Item -ItemType Directory -Path "components/auth" -Force
-New-Item -ItemType Directory -Path "components/dashboard" -Force
-New-Item -ItemType Directory -Path "components/ui" -Force
-New-Item -ItemType Directory -Path "context" -Force
-New-Item -ItemType Directory -Path "interfaces" -Force
+          windowsCode={`# Crear carpetas
 New-Item -ItemType Directory -Path "lib/firebase" -Force
+New-Item -ItemType Directory -Path "actions" -Force
+New-Item -ItemType Directory -Path "app/login" -Force
+New-Item -ItemType Directory -Path "app/register" -Force
+New-Item -ItemType Directory -Path "app/dashboard" -Force
+New-Item -ItemType Directory -Path "components/auth" -Force
 
-# Crear archivos de autenticación en actions/auth
-New-Item -ItemType File -Path "actions/auth/auth.ts" -Force
-New-Item -ItemType File -Path "actions/auth/get-user.ts" -Force
-New-Item -ItemType File -Path "actions/auth/update-profile.ts" -Force
-
-# Crear archivos de API
-New-Item -ItemType File -Path "app/api/auth/callback/route.ts" -Force
-New-Item -ItemType File -Path "app/api/auth/signout/route.ts" -Force
-
-# Crear páginas y layouts
-New-Item -ItemType File -Path "app/dashboard/layout.tsx" -Force
-New-Item -ItemType File -Path "app/dashboard/page.tsx" -Force
-New-Item -ItemType File -Path "app/profile/page.tsx" -Force
-New-Item -ItemType File -Path "app/update-password/page.tsx" -Force
-
-# Crear componentes de perfil en profile/components
-New-Item -ItemType File -Path "app/profile/components/AccountForm.tsx" -Force
-New-Item -ItemType File -Path "app/profile/components/UserProfile.tsx" -Force
-
-# Crear componentes de autenticación
-New-Item -ItemType File -Path "components/auth/AuthForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/RecoverPasswordForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/SignInForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/SignUpForm.tsx" -Force
-New-Item -ItemType File -Path "components/auth/UpdatePasswordForm.tsx" -Force
-
-# Crear componentes de dashboard
-New-Item -ItemType File -Path "components/dashboard/Header.tsx" -Force
-New-Item -ItemType File -Path "components/dashboard/Sidebar.tsx" -Force
-
-# Crear componentes UI personalizados
-New-Item -ItemType File -Path "components/ui/form.tsx" -Force
-
-# Crear archivos de Firebase
-New-Item -ItemType File -Path "lib/firebase/client.ts" -Force
+# Crear archivos vacíos (los llenas en los próximos pasos)
 New-Item -ItemType File -Path "lib/firebase/admin.ts" -Force
-New-Item -ItemType File -Path "lib/firebase/auth.ts" -Force
-
-# Crear archivos de Context e Interfaces
-New-Item -ItemType File -Path "context/AuthContext.tsx" -Force
-New-Item -ItemType File -Path "interfaces/user.ts" -Force
-
-# Crear archivos de configuración
+New-Item -ItemType File -Path "lib/firebase/client.ts" -Force
+New-Item -ItemType File -Path "lib/firebase/session.ts" -Force
+New-Item -ItemType File -Path "actions/auth.ts" -Force
+New-Item -ItemType File -Path "app/login/page.tsx" -Force
+New-Item -ItemType File -Path "app/register/page.tsx" -Force
+New-Item -ItemType File -Path "app/dashboard/page.tsx" -Force
+New-Item -ItemType File -Path "components/auth/GoogleLoginButton.tsx" -Force
+New-Item -ItemType File -Path "proxy.ts" -Force
 New-Item -ItemType File -Path ".env.local" -Force
-New-Item -ItemType File -Path "middleware.ts" -Force
 
-Write-Host "✅ Estructura de carpetas y archivos creada exitosamente!" -ForegroundColor Green`}
-          linuxCode={`# Crear estructura de carpetas
-mkdir -p actions/auth
-mkdir -p app/api/auth/callback
-mkdir -p app/api/auth/signout
-mkdir -p app/dashboard
-mkdir -p app/profile/components
-mkdir -p app/update-password
-mkdir -p components/auth
-mkdir -p components/dashboard
-mkdir -p components/ui
-mkdir -p context
-mkdir -p interfaces
-mkdir -p lib/firebase
+Write-Host "✅ Estructura creada!" -ForegroundColor Green`}
+          linuxCode={`# Crear carpetas
+mkdir -p lib/firebase actions app/login app/register app/dashboard components/auth
 
-# Crear archivos
-touch actions/auth/auth.ts
-touch actions/auth/get-user.ts
-touch actions/auth/update-profile.ts
-touch app/api/auth/callback/route.ts
-touch app/api/auth/signout/route.ts
-touch app/dashboard/layout.tsx
-touch app/dashboard/page.tsx
-touch app/profile/page.tsx
-touch app/update-password/page.tsx
-touch app/profile/components/AccountForm.tsx
-touch app/profile/components/UserProfile.tsx
-touch components/auth/AuthForm.tsx
-touch components/auth/RecoverPasswordForm.tsx
-touch components/auth/SignInForm.tsx
-touch components/auth/SignUpForm.tsx
-touch components/auth/UpdatePasswordForm.tsx
-touch components/dashboard/Header.tsx
-touch components/dashboard/Sidebar.tsx
-touch components/ui/form.tsx
-touch lib/firebase/client.ts
-touch lib/firebase/admin.ts
-touch lib/firebase/auth.ts
-touch context/AuthContext.tsx
-touch interfaces/user.ts
-touch .env.local
-touch middleware.ts
+# Crear archivos vacíos (los llenas en los próximos pasos)
+touch lib/firebase/admin.ts lib/firebase/client.ts lib/firebase/session.ts
+touch actions/auth.ts app/login/page.tsx app/register/page.tsx app/dashboard/page.tsx
+touch components/auth/GoogleLoginButton.tsx
+touch proxy.ts .env.local
 
-echo "✅ Estructura de carpetas y archivos creada exitosamente!"`}
+echo "✅ Estructura creada!"`}
+        />
+        <p className="section-paragraph">La estructura final queda así:</p>
+        <CodeBlock
+          code={`mi-app/
+├── app/
+│   ├── login/page.tsx              ← Login (SDK web en el navegador)
+│   ├── register/page.tsx           ← Registro (SDK web en el navegador)
+│   ├── dashboard/page.tsx          ← Página protegida (Admin SDK en el servidor)
+│   └── page.tsx                    ← (template, se adapta en el paso 5)
+├── actions/
+│   └── auth.ts                     ← Server Actions (crear sesión, logout)
+├── lib/firebase/
+│   ├── client.ts                   ← SDK web (config pública)
+│   ├── admin.ts                    ← Admin SDK (cuenta de servicio)
+│   └── session.ts                  ← Lee la cookie de sesión
+├── proxy.ts                        ← Protección de rutas (Next 16)
+└── .env.local                      ← Credenciales`}
         />
       </section>
     </>

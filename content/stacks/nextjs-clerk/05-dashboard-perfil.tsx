@@ -5,123 +5,52 @@ export default function DashboardPerfil() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Dashboard y Perfil Protegido</h1>
+        <h1 className="content-title">Dashboard Protegido</h1>
         <p className="content-subtitle">
-          Páginas protegidas con Clerk y uso de metadatos del usuario
+          Página privada y controles de auth en la home
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📊</span>
-          1. Dashboard protegido
+          1. Dashboard protegido (<code>app/dashboard/page.tsx</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Crea <code>app/dashboard/page.tsx</code> con protección automática gracias al middleware de Clerk:
+          Un Server Component que lee la sesión con <code>await auth()</code>,
+          redirige al login si no hay usuario y muestra sus datos con{" "}
+          <code>currentUser()</code>. Crea <code>app/dashboard/page.tsx</code>:
         </p>
         <CodeBlock
-          code={`"use client";
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+          code={`import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function DashboardPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const router = useRouter();
+export default async function DashboardPage() {
+  // Clerk v7: auth() es async
+  const { userId } = await auth();
 
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/sign-in");
-    }
-  }, [isLoaded, isSignedIn, router]);
+  if (!userId) {
+    redirect("/sign-in");
+  }
 
-  if (!isLoaded) return <div className="p-8 text-center">Cargando...</div>;
-  if (!isSignedIn) return null;
+  const user = await currentUser();
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-      <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-2xl border border-gray-700">
-        <p className="text-lg">Bienvenido, {user.fullName || user.firstName} 👋</p>
-        <p className="text-gray-400 mt-2">Email: {user.emailAddresses[0]?.emailAddress}</p>
-        <p className="text-gray-400 mt-1">ID: {user.id}</p>
-        <div className="mt-4 flex gap-4">
-          <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-300 text-sm">
-            Rol: {user.publicMetadata?.role || "usuario"}
-          </span>
-        </div>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <div className="rounded-2xl border border-gray-200 p-8 shadow-lg dark:border-white/10">
+        <img
+          src={user?.imageUrl}
+          alt={user?.firstName ?? "Usuario"}
+          className="mx-auto mb-4 h-20 w-20 rounded-full"
+        />
+        <p className="text-lg font-medium">
+          {user?.firstName} {user?.lastName}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {user?.emailAddresses[0]?.emailAddress}
+        </p>
       </div>
-    </div>
-  );
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">👤</span>
-          2. Perfil de usuario con Clerk
-        </h2>
-        <p className="section-paragraph">
-          Crea <code>app/profile/page.tsx</code> usando el componente <code>UserProfile</code> de Clerk:
-        </p>
-        <CodeBlock
-          code={`import { UserProfile } from "@clerk/nextjs";
-
-export default function ProfilePage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <UserProfile
-        appearance={{
-          elements: {
-            rootBox: "w-full max-w-2xl",
-            card: "bg-gray-800/50 backdrop-blur-sm border border-gray-700 shadow-xl",
-            navbar: "bg-gray-900/50",
-            navbarButton: "text-gray-300 hover:text-white hover:bg-gray-700/50",
-            navbarActive: "bg-gray-700/50 text-white",
-            profileSection: "text-gray-300",
-            profileSectionTitle: "text-white",
-            formFieldLabel: "text-gray-300",
-            formFieldInput: "bg-gray-800/50 border-gray-600 text-white",
-            formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white",
-          },
-        }}
-      />
-    </div>
-  );
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">📦</span>
-          3. Metadatos de usuario en Clerk
-        </h2>
-        <p className="section-paragraph">
-          Clerk permite añadir metadatos públicos y privados a los usuarios. Puedes establecerlos
-          desde el dashboard de Clerk o mediante la API. Ejemplo de cómo acceder a ellos:
-        </p>
-        <CodeBlock
-          code={`"use client";
-import { useUser } from "@clerk/nextjs";
-
-export default function UserBadge() {
-  const { user } = useUser();
-
-  if (!user) return null;
-
-  const role = user.publicMetadata?.role || "usuario";
-  const plan = user.publicMetadata?.plan || "gratuito";
-
-  return (
-    <div className="flex gap-2">
-      <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
-        {role}
-      </span>
-      <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm">
-        {plan}
-      </span>
     </div>
   );
 }`}
@@ -129,42 +58,87 @@ export default function UserBadge() {
         <div className="tip">
           <span className="tip-icon">💡</span>
           <span>
-            Los metadatos públicos son accesibles desde el frontend. Los metadatos privados solo
-            se pueden leer desde el servidor usando <code>auth().session?.user?.privateMetadata</code>.
+            El logout no requiere código: el <code>UserButton</code> (paso 3) ya
+            incluye "Cerrar sesión" en su menú. Si quieres una redirección tras
+            cerrar sesión, pasa <code>afterSignOutUrl="/"</code> al{" "}
+            <code>&lt;UserButton /&gt;</code>.
           </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🛡️</span>
-          4. Protección de rutas en Server Components
+          <span className="section-icon">🔗</span>
+          2. Home con controles de auth (<code>app/page.tsx</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          En Server Components, puedes usar <code>auth()</code> para verificar autenticación y
-          redirigir si no hay usuario:
+          <code>clerk init</code> deja los controles listos en la home. Si la
+          reemplazas, integra <code>SignInButton</code>, <code>SignUpButton</code>,
+          <code>Show</code> y <code>UserButton</code> para que el usuario pueda
+          crear su primera cuenta desde el header. Ejemplo completo:
         </p>
         <CodeBlock
-          code={`import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+          code={`import {
+  SignInButton,
+  SignUpButton,
+  Show,
+  UserButton,
+} from "@clerk/nextjs";
 
-export default async function ProtectedServerComponent() {
-  const { userId } = auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  // Obtener datos del usuario desde la base de datos
-  // ...
-
+export default function Home() {
   return (
-    <div>
-      <h1>Contenido protegido</h1>
-      <p>Usuario ID: {userId}</p>
+    <div className="flex min-h-screen flex-col">
+      <header className="flex items-center justify-end gap-4 p-6">
+        <Show when="signed-out">
+          <SignInButton />
+          <SignUpButton />
+        </Show>
+        <Show when="signed-in">
+          <UserButton afterSignOutUrl="/" />
+        </Show>
+      </header>
+
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
+        <h1 className="text-4xl font-bold">Bienvenido</h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          Inicia sesión o crea una cuenta desde el header
+        </p>
+      </main>
     </div>
   );
 }`}
         />
+        <div className="tip">
+          <span className="tip-icon">🧩</span>
+          <span>
+            <code>Show when="signed-out" / "signed-in"</code> es el sustituto
+            moderno de <code>SignedIn</code>/<code>SignedOut</code> (deprecados en
+            esta versión).
+          </span>
+        </div>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🧪</span>
+          3. Probar el flujo completo
+        </h2>
+        <CommandBlock command="npm run dev" />
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>Abre <code>http://localhost:3000</code> → verás los botones Sign in / Sign up.</li>
+          <li>Haz clic en <strong>Sign up</strong> → formulario de Clerk en <code>/sign-up</code>.</li>
+          <li>Crea tu primer usuario → al autenticarte aparece el <code>UserButton</code>.</li>
+          <li>Entra a <code>/dashboard</code> autenticado → ves tus datos.</li>
+          <li>Visita <code>/dashboard</code> sin sesión → el proxy te manda a <code>/sign-in</code>.</li>
+          <li>Abre el menú del <code>UserButton</code> → <strong>Sign out</strong> → vuelves a la home.</li>
+        </ol>
+        <div className="tip">
+          <span className="tip-icon">🎉</span>
+          <span>
+            Si aparece el aviso "Configure your application" en el dashboard de
+            Clerk, haz clic en él para completar los datos de tu app (nombre, etc.).
+          </span>
+        </div>
       </section>
     </>
   );
