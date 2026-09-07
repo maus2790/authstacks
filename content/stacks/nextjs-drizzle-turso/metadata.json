@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Drizzle + Turso",
   "slug": "nextjs-drizzle-turso",
+  "category": "manual",
   "description": "El stack moderno y ligero para SaaS. Type-safe de extremo a extremo con Drizzle ORM y Turso (SQLite Edge).",
   "difficulty": "Intermedio",
   "icon": "⚡",
-  "tags": ["Next.js", "TypeScript", "SQLite", "Drizzle", "Tailwind"]
+  "tags": ["Next.js", "TypeScript", "SQLite", "Drizzle", "Tailwind"],
+  "summary": "Base de datos SQLite en el edge (Turso) con Drizzle ORM: auth a mano sobre tablas SQL con tipos de extremo a extremo.",
+  "pros": [
+    "SQLite en el edge: lecturas ultrarrápidas cerca del usuario",
+    "Drizzle: queries type-safe con schema TypeScript",
+    "Modelo relacional simple y sin servidor de BD que operar"
+  ],
+  "cons": [
+    "Auth manual: tú escribes el hash, las sesiones y las validaciones",
+    "Turso gratis con límites (bases y filas)",
+    "Requiere conocer SQL y migraciones"
+  ]
 }

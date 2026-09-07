@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Lucia Auth",
   "slug": "nextjs-lucia",
+  "category": "librerias",
   "description": "Una biblioteca de autenticación minimalista y moderna que te da control total sobre tu base de datos y flujos de autenticación.",
   "difficulty": "Intermedio",
   "icon": "🦋",
-  "tags": ["Next.js", "Lucia", "TypeScript", "Database-agnostic"]
+  "tags": ["Next.js", "Lucia", "TypeScript", "Database-agnostic"],
+  "summary": "Biblioteca minimalista: tú creas las tablas, las Server Actions y el hash. Lucia solo gestiona sesiones y cookies.",
+  "pros": [
+    "Mínima: entiendes cada pieza del auth que escribes",
+    "Independiente del ORM (funciona con tu base de datos)",
+    "Ideal para aprender cómo funciona la autenticación"
+  ],
+  "cons": [
+    "Descontinuada por su autor (sin actualizaciones, migra a Better Auth)",
+    "Escribes mucho a mano (schema, acciones, validaciones)",
+    "No recomendada para producción nueva"
+  ]
 }

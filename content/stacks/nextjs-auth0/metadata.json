@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Auth0",
   "slug": "nextjs-auth0",
+  "category": "baas",
   "description": "Login y registro en Next.js con Auth0: Universal Login, dashboard protegido y cierre de sesión con el mínimo código posible.",
   "difficulty": "Principiante",
   "icon": "🏢",
-  "tags": ["Next.js", "Auth0", "Autenticación", "SSO"]
+  "tags": ["Next.js", "Auth0", "Autenticación", "SSO"],
+  "summary": "Plataforma de identidad empresarial (Okta) con Universal Login hosteado: Auth0 muestra el formulario y tu app solo lee la sesión.",
+  "pros": [
+    "Casi cero código: login, registro y sesión los maneja Auth0",
+    "Seguridad empresarial incluida (MFA, breach protection, SSO)",
+    "Escala a millones de usuarios sin tocar infraestructura"
+  ],
+  "cons": [
+    "Plan Free con límite de usuarios (~7.500 activos)",
+    "Formulario hosteado: personalización profunda es de pago",
+    "Roles y datos de negocio viven en tu propia base de datos"
+  ]
 }

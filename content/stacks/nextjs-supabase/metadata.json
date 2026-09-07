@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Supabase",
   "slug": "nextjs-supabase",
-  "description": "La forma más rápida de implementar auth completa con Backend as a Service (BaaS). Incluye Auth, DB y Storage listos para usar.",
+  "category": "baas",
+  "description": "Auth completa con Backend as a Service (BaaS): sesiones con cookies automáticas, Auth y PostgreSQL listos para usar. Sin shadcn/ui.",
   "difficulty": "Principiante",
   "icon": "🟢",
-  "tags": ["Next.js", "Supabase", "PostgreSQL", "Tailwind"]
+  "tags": ["Next.js", "Supabase", "PostgreSQL", "BaaS"],
+  "summary": "Backend completo open source (Auth + PostgreSQL): @supabase/ssr maneja las sesiones en cookies automáticamente.",
+  "pros": [
+    "Auth + base de datos PostgreSQL en un solo servicio",
+    "Sesiones con cookies gestionadas por el SDK (@supabase/ssr)",
+    "Open source: puedes self-hostear si lo necesitas"
+  ],
+  "cons": [
+    "La base de datos viene incluida, no es opcional",
+    "Reglas RLS (Row Level Security) requieren aprendizaje",
+    "Dependencia de un servicio externo para auth y datos"
+  ]
 }

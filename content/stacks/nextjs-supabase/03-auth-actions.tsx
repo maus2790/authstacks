@@ -7,254 +7,149 @@ export default function AuthActions() {
       <header className="content-header">
         <h1 className="content-title">Server Actions de Autenticación</h1>
         <p className="content-subtitle">
-          Todas las acciones del servidor: login, registro, recuperación, actualización y gestión de perfil
+          Login, registro y logout contra Supabase Auth
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">📡</span>
-          1. Acciones principales de autenticación
+          <span className="section-icon">💡</span>
+          1. Cómo funciona la sesión
         </h2>
         <p className="section-paragraph">
-          Crea <code>actions/auth/auth.ts</code> con las siguientes funciones:
+          Supabase Auth gestiona las sesiones por ti: al autenticarte con{" "}
+          <code>signInWithPassword</code>, el cliente del servidor guarda la sesión
+          en cookies automáticamente (vía el <code>setAll</code> del paso 2). Para
+          leer al usuario usamos <code>getUser()</code>, que valida el JWT contra
+          Supabase (más seguro que <code>getSession()</code>).
         </p>
+      </section>
 
-        <h3 className="subsection-title">1.1. Login</h3>
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">📡</span>
+          2. Server Actions (<code>actions/auth.ts</code>) — archivo completo
+        </h2>
+        <p className="section-paragraph">
+          Crea <code>actions/auth.ts</code> con este contenido completo:
+        </p>
         <CodeBlock
-          code={`'use server'
-import { createClient } from '@/lib/supabase/server'
+          code={`"use server";
 
-export async function login(formData: { email: string, password: string }) {
-  const supabase = await createClient()
-  const { error, data } = await supabase.auth.signInWithPassword(formData)
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+export type ActionState = { error?: string } | undefined;
+
+// Traduce errores comunes de Supabase a mensajes amigables
+function friendlyError(message: string): string {
+  if (message.includes("Invalid login credentials")) {
+    return "Credenciales incorrectas. Verifica tu correo y contraseña.";
+  }
+  if (message.includes("Email not confirmed")) {
+    return "Debes confirmar tu correo electrónico primero. Revisa tu bandeja.";
+  }
+  if (message.includes("already registered") || message.includes("already been registered")) {
+    return "Este correo ya está registrado.";
+  }
+  return message;
+}
+
+export async function loginAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (!password) return { error: "La contraseña es obligatoria" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { success: false, message: error.message }
+    return { error: friendlyError(error.message) };
   }
 
-  return { success: true, message: "Usuario autenticado exitosamente", data }
-}`}
-        />
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
 
-        <h3 className="subsection-title">1.2. Signup</h3>
-        <CodeBlock
-          code={`export async function signup(formData: { name: string, email: string, password: string }) {
-  const supabase = await createClient()
-  const { error, data } = await supabase.auth.signUp({
-    email: formData.email,
-    password: formData.password,
+export async function registerAction(
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!name || name.length < 2) return { error: "El nombre es obligatorio (mín. 2 caracteres)" };
+  if (!email.includes("@")) return { error: "Correo inválido" };
+  if (password.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
     options: {
-      data: { name: formData.name }
-    }
-  })
+      data: { name },
+      emailRedirectTo: \`\${process.env.NEXT_PUBLIC_APP_URL}/auth/callback\`,
+    },
+  });
 
   if (error) {
-    return { success: false, message: error.message }
+    return { error: friendlyError(error.message) };
   }
 
-  return { success: true, message: "Usuario registrado exitosamente", data }
-}`}
-        />
-
-        <h3 className="subsection-title">1.3. Enviar correo de recuperación</h3>
-        <CodeBlock
-          code={`export async function sendRecoveryEmail(formData: { email: string }) {
-  const supabase = await createClient()
-  const { error, data } = await supabase.auth.resetPasswordForEmail(formData.email)
-
-  if (error) {
-    return { success: false, message: error.message }
+  // Si Supabase requiere confirmación de email, no hay sesión todavía
+  if (!data.session) {
+    return {
+      error:
+        "Revisa tu correo y haz clic en el enlace de confirmación antes de iniciar sesión.",
+    };
   }
 
-  return { success: true, message: "Correo de recuperación enviado exitosamente", data }
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+export async function logoutAction() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
 }`}
         />
-
-        <h3 className="subsection-title">1.4. Actualizar contraseña</h3>
-        <CodeBlock
-          code={`export async function updatePassword(formData: { password: string }) {
-  const supabase = await createClient()
-  const { error, data } = await supabase.auth.updateUser({
-    password: formData.password
-  })
-
-  if (error) {
-    return { success: false, message: error.message }
-  }
-
-  return { success: true, message: 'Contraseña actualizada exitosamente', data }
-}`}
-        />
+        <div className="tip">
+          <span className="tip-icon">💡</span>
+          <span>
+            <code>options.data: {"{ name }"}</code> guarda el nombre en{" "}
+            <code>user_metadata</code> (lo leemos en el dashboard). El{" "}
+            <code>emailRedirectTo</code> apunta al callback del paso 4 para el flujo
+            de confirmación por email.
+          </span>
+        </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">👤</span>
-          2. Acciones de usuario (get-user, update-avatar, update-profile)
+          3. Leer el usuario (<code>lib/supabase/session.ts</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">2.1. Obtener usuario (<code>actions/auth/get-user.ts</code>)</h3>
-        <CodeBlock
-          code={`"use server"
-import { createClient } from "@/lib/supabase/server"
-import { User } from "@/interfaces/user";
-
-export const getUser = async (): Promise<User | null> => {
-  try {
-    const supabase = await createClient()
-    const { data: { user: session } } = await supabase.auth.getUser()
-
-    if (!session) return null
-
-    const userId = session.id;
-
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select("*")
-      .eq('id', userId)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user:', userError);
-      return null
-    }
-
-    return userData;
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    return null
-  }
-}`}
-        />
-
-        <h3 className="subsection-title">2.2. Actualizar avatar (<code>actions/auth/update-avatar.ts</code>)</h3>
-        <CodeBlock
-          code={`'use server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function updateAvatar(formData: FormData) {
-  const supabase = await createClient();
-  const file = formData.get('file') as File;
-  const userId = formData.get('userId') as string;
-
-  const fileExt = file.name.split('.').pop()
-  const filePath = \`\${userId}.\${fileExt}\`
-
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(filePath, file, { upsert: true, contentType: file.type })
-
-  if (uploadError) {
-    throw new Error(\`Error al subir imagen: \${uploadError.message}\`)
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from('avatars')
-    .getPublicUrl(filePath)
-
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ avatar_url: publicUrlData.publicUrl, updated_at: new Date().toISOString() })
-    .eq('id', userId)
-
-  if (updateError) {
-    throw new Error(\`Error al actualizar perfil: \${updateError.message}\`)
-  }
-
-  return { publicUrl: publicUrlData.publicUrl }
-}`}
-        />
-
-        <h3 className="subsection-title">2.3. Actualizar perfil (<code>actions/auth/update-profile.ts</code>)</h3>
-        <CodeBlock
-          code={`'use server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function updateProfile(values: {
-  id: string
-  name: string
-  phone?: string | null
-  country_code?: string | null
-}) {
-  const supabase = await createClient()
-
-  const { error } = await supabase.from('profiles').upsert({
-    id: values.id,
-    name: values.name,
-    phone: values.phone,
-    country_code: values.country_code,
-    updated_at: new Date().toISOString(),
-  })
-
-  if (error) {
-    console.error('Error updating profile:', error)
-    throw new Error('Hubo un error al actualizar el perfil.')
-  }
-
-  return { success: true }
-}`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">🌐</span>
-          3. Endpoints API
-        </h2>
-
-        <h3 className="subsection-title">3.1. Callback de autenticación (<code>app/api/auth/callback/route.ts</code>)</h3>
-        <CodeBlock
-          code={`import { type EmailOtpType } from '@supabase/supabase-js'
-import { type NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const { searchParams, origin } = requestUrl
-
-  const code = searchParams.get('code')
-  const token_hash = searchParams.get('token_hash')
-  const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/dashboard'
-
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(\`\${origin}\${next}\`)
-    }
-  }
-
-  if (token_hash && type) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash })
-    if (!error) {
-      if (type === 'email') {
-        return NextResponse.redirect(\`\${origin}/dashboard\`)
-      }
-      if (type === 'recovery') {
-        return NextResponse.redirect(\`\${origin}/update-password\`)
-      }
-      return NextResponse.redirect(\`\${origin}\${next}\`)
-    }
-  }
-
-  return NextResponse.redirect(\`\${origin}/?error=Falló_la_autenticación\`)
-}`}
-        />
-
-        <h3 className="subsection-title">3.2. Cierre de sesión (<code>app/api/auth/signout/route.ts</code>)</h3>
         <CodeBlock
           code={`import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
-import { type NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+// Devuelve los datos del usuario autenticado o null.
+// getUser() valida el JWT contra Supabase (más seguro que getSession()).
+export async function getSessionUser() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  revalidatePath("/", "layout");
-  return NextResponse.redirect(new URL("/", req.url), { status: 302 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user;
 }`}
         />
       </section>

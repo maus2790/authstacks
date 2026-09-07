@@ -1,8 +1,20 @@
 {
   "name": "Void + Drizzle + Better Auth",
   "slug": "void-drizzle-better-auth",
+  "category": "deploy",
   "description": "El stack del futuro: infraestructura aprovisionada automáticamente. Void escanea tu código, crea la base de datos D1, configura Better Auth y despliega todo con un solo comando.",
   "difficulty": "Intermedio",
   "icon": "🚀",
-  "tags": ["Void", "Drizzle", "Better Auth", "D1", "Full-Stack"]
+  "tags": ["Void", "Drizzle", "Better Auth", "D1", "Full-Stack"],
+  "summary": "Despliegue automático: Void detecta tu stack, crea la infraestructura (D1, auth) y despliega la app con un comando.",
+  "pros": [
+    "Infraestructura aprovisionada automáticamente (cero config)",
+    "Better Auth open source sobre Cloudflare D1",
+    "Ideal para prototipar y lanzar en minutos"
+  ],
+  "cons": [
+    "Dependes de la plataforma Void para el despliegue",
+    "Auth y BD gestionadas por la plataforma (menos control)",
+    "Stack más nuevo: menos comunidad y documentación"
+  ]
 }

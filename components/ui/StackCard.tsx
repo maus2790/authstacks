@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { StackMetadata } from '@/types';
-import { ChevronRight, Star } from 'lucide-react';
+import Link from "next/link";
+import { StackMetadata } from "@/types";
+import { CheckCircle2, ChevronRight, Star, XCircle } from "lucide-react";
 
 interface StackCardProps {
   metadata: StackMetadata;
@@ -9,9 +9,9 @@ interface StackCardProps {
 
 export function StackCard({ metadata, stepsCount }: StackCardProps) {
   const difficultyColors = {
-    Principiante: 'bg-green-500/20 text-green-400 border-green-500/30',
-    Intermedio: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    Avanzado: 'bg-red-500/20 text-red-400 border-red-500/30',
+    Principiante: "bg-green-500/20 text-green-400 border-green-500/30",
+    Intermedio: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    Avanzado: "bg-red-500/20 text-red-400 border-red-500/30",
   };
 
   const difficultyStars = {
@@ -48,8 +48,37 @@ export function StackCard({ metadata, stepsCount }: StackCardProps) {
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {metadata.description}
+          {metadata.summary}
         </p>
+
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-semibold text-green-500 flex items-center gap-1 mb-1">
+              <CheckCircle2 size={13} /> Ventajas
+            </p>
+            <ul className="space-y-1">
+              {metadata.pros.slice(0, 3).map((pro) => (
+                <li key={pro} className="text-xs text-muted-foreground leading-relaxed flex gap-1.5">
+                  <span className="text-green-500 shrink-0">•</span>
+                  {pro}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-red-500 flex items-center gap-1 mb-1">
+              <XCircle size={13} /> Limitaciones
+            </p>
+            <ul className="space-y-1">
+              {metadata.cons.slice(0, 3).map((con) => (
+                <li key={con} className="text-xs text-muted-foreground leading-relaxed flex gap-1.5">
+                  <span className="text-red-500 shrink-0">•</span>
+                  {con}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {metadata.tags.map((tag) => (
@@ -64,7 +93,7 @@ export function StackCard({ metadata, stepsCount }: StackCardProps) {
 
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <span className="text-sm text-muted-foreground">
-            {stepsCount} {stepsCount === 1 ? 'paso' : 'pasos'}
+            {stepsCount} {stepsCount === 1 ? "paso" : "pasos"}
           </span>
           <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:text-primary/80 transition-colors group-hover:gap-2">
             Ver guía

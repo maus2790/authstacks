@@ -7,145 +7,91 @@ export default function Configuracion() {
       <header className="content-header">
         <h1 className="content-title">Configuración de Supabase</h1>
         <p className="content-subtitle">
-          Clientes, variables de entorno y middleware
+          Proyecto, credenciales, clientes y proxy
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔷</span>
-          1. Creación de proyecto en Supabase
-        </h2>
-        <p className="section-paragraph">Sigue estos pasos en el Dashboard de Supabase:</p>
-        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
-          <li>Haz clic en <strong>"New Project"</strong>.</li>
-          <li>Completa el formulario: organización, nombre, contraseña segura (guárdala), región.</li>
-          <li>Marca <strong>Enable Data API</strong> y <strong>Enable automatic RLS</strong>.</li>
-          <li>Espera a que se cree el proyecto.</li>
-        </ol>
-        <p className="section-paragraph">Obtén las credenciales:</p>
-        <ul className="list-disc pl-6 text-gray-300 space-y-2">
-          <li><strong>Project URL:</strong> Ejemplo <code>https://smsdrwkqwrchqbobbyxi.supabase.co</code></li>
-          <li><strong>Publishable Key (anon key):</strong> Ejemplo <code>sb_publishtable_N9cZDAE01QhXkS2kuwOMw_y8ci</code></li>
-        </ul>
-        <div className="tip">
-          <span className="tip-icon">⚠️</span>
-          <span>Estas credenciales son sensibles. La Publishable Key es segura para el cliente.</span>
-        </div>
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
           <span className="section-icon">🔧</span>
-          2. Variables de entorno (<code>.env.local</code>)
+          1. Crear proyecto y obtener credenciales
         </h2>
-        <p className="section-paragraph">Crea el archivo <code>.env.local</code> con:</p>
-        <CodeBlock
-          code={`NEXT_PUBLIC_SUPABASE_URL="https://tu-proyecto.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="tu-anon-key-aqui"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"`}
-        />
-      </section>
-
-      <section className="section-card">
-        <h2 className="section-title">
-          <span className="section-icon">🗄️</span>
-          3. Creación de tablas en Supabase
-        </h2>
-        <p className="section-paragraph">
-          Ve a <strong>SQL Editor</strong> y ejecuta el siguiente script para crear la tabla <code>profiles</code> y configurar RLS:
-        </p>
-        <CodeBlock
-          code={`-- Create a table for public profiles
-create table profiles (
-  id uuid references auth.users not null primary key,
-  updated_at timestamp with time zone,
-  created_at timestamp with time zone,
-  name text,
-  email text,
-  country_code text,
-  phone text,
-  avatar_url text
-);
-
--- Set up Row Level Security (RLS)
-alter table profiles enable row level security;
-
-create policy "Public profiles are viewable by everyone." on profiles
-  for select using (true);
-
-create policy "Users can insert their own profile." on profiles
-  for insert with check ((select auth.uid()) = id);
-
-create policy "Users can update own profile." on profiles
-  for update using ((select auth.uid()) = id);
-
--- Trigger para crear perfil automáticamente al registrarse
-create or replace function public.handle_new_user()
-returns trigger
-set search_path = ''
-as $$
-begin
-  insert into public.profiles (id, created_at, updated_at, name, email, avatar_url)
-  values (
-    new.id,
-    now(),
-    now(),
-    new.raw_user_meta_data->>'name',
-    new.email,
-    new.raw_user_meta_data->>'avatar_url'
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- Configurar Storage para avatares
-insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);
-
-create policy "Avatar images are publicly accessible." on storage.objects
-  for select using (bucket_id = 'avatars');
-
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
-
-create policy "Anyone can update their own avatar." on storage.objects
-  for update using ((select auth.uid()) = owner) with check (bucket_id = 'avatars');`}
-        />
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>Entra a <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Supabase Dashboard</a> → <strong>New Project</strong>.</li>
+          <li>Pon nombre, contraseña de la base de datos (guárdala) y región → crea.</li>
+          <li>En el menú lateral: <strong>⚙️ Project Settings → API</strong> (Data API).</li>
+          <li>Copia la <strong>Project URL</strong> y la <strong>anon key</strong> (pública).</li>
+        </ol>
         <div className="tip">
-          <span className="tip-icon">✅</span>
-          <span>Después de ejecutar el script, verifica que la tabla <code>profiles</code> existe en <strong>Table Editor</strong>.</span>
+          <span className="tip-icon">🔑</span>
+          <span>
+            La <strong>anon key</strong> es <strong>pública</strong> por diseño (va en
+            <code>NEXT_PUBLIC_*</code>). La <code>service_role</code> key NO debe ir
+            nunca en el cliente.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📧</span>
-          4. Plantillas de correo
+          2. Configurar la confirmación de email (recomendado para desarrollo)
         </h2>
         <p className="section-paragraph">
-          Personaliza los correos de confirmación y recuperación en <strong>Authentication → Email</strong>.
-          Puedes usar plantillas HTML personalizadas (ver código completo en los archivos del proyecto).
+          Por defecto Supabase exige <strong>confirmar el email</strong> antes de
+          iniciar sesión. Para desarrollo local es más cómodo desactivarlo:
         </p>
+        <ol className="list-decimal pl-6 text-gray-300 space-y-2">
+          <li>Supabase Dashboard → <strong>Authentication → Providers → Email</strong>.</li>
+          <li>
+            Desactiva <strong>"Confirm email"</strong> (o déjalo activo si quieres el
+            flujo real de confirmación; la guía funciona en ambos casos).
+          </li>
+          <li>Guarda.</li>
+        </ol>
         <div className="tip">
-          <span className="tip-icon">💡</span>
-          <span>Las variables <code>{`{{ .SiteURL }}`}</code> y <code>{`{{ .TokenHash }}`}</code> son reemplazadas automáticamente por Supabase.</span>
+          <span className="tip-icon">⚙️</span>
+          <span>
+            Si dejas "Confirm email" activo, tras el registro el usuario debe abrir
+            el enlace del correo (Supabase lo envía gratis) antes de poder iniciar
+            sesión. Para producción es lo recomendado.
+          </span>
         </div>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🔌</span>
-          5. Clientes de Supabase
+          <span className="section-icon">🔐</span>
+          3. Variables de entorno (<code>.env.local</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">5.1. Cliente del navegador (<code>lib/supabase/client.ts</code>)</h3>
         <CodeBlock
-          code={`import { createBrowserClient } from "@supabase/ssr";
+          code={`# Supabase — Project Settings -> API (Data API)
+# URL: https://<tu-proyecto>.supabase.co
+NEXT_PUBLIC_SUPABASE_URL="https://tu-proyecto.supabase.co"
+# anon/publishable key (pública, puede ir en el cliente)
+NEXT_PUBLIC_SUPABASE_ANON_KEY="tu-anon-key"
 
+# URL de tu app
+NEXT_PUBLIC_APP_URL="http://localhost:3000"`}
+        />
+        <p className="section-paragraph">
+          Reinicia el servidor de desarrollo tras añadirlas (las variables se cargan
+          al arrancar).
+        </p>
+      </section>
+
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🖥️</span>
+          4. Cliente del navegador (<code>lib/supabase/client.ts</code>) — archivo completo
+        </h2>
+        <CodeBlock
+          code={`"use client";
+
+import { createBrowserClient } from "@supabase/ssr";
+
+// Cliente del NAVEGADOR. Se usa en Client Components (ej: botón de Google).
+// Crea una instancia nueva en cada uso (no exportes una singleton).
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -153,12 +99,19 @@ export function createClient() {
   );
 }`}
         />
+      </section>
 
-        <h3 className="subsection-title">5.2. Cliente del servidor (<code>lib/supabase/server.ts</code>)</h3>
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">🖥️</span>
+          5. Cliente del servidor (<code>lib/supabase/server.ts</code>) — archivo completo
+        </h2>
         <CodeBlock
           code={`import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// Cliente del SERVIDOR. Se usa en Server Components, Server Actions y
+// Route Handlers. Crea UNA instancia nueva por request (nunca compartir).
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -176,7 +129,8 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Ignorar en Server Components
+            // Si falla es porque estamos en un Server Component sin poder
+            // escribir cookies (el proxy se encarga de refrescarlas).
           }
         },
       },
@@ -184,51 +138,14 @@ export async function createClient() {
   );
 }`}
         />
-
-        <h3 className="subsection-title">5.3. Middleware (<code>lib/supabase/proxy.ts</code>)</h3>
-        <CodeBlock
-          code={`import { getUser } from '@/actions/auth/get-user';
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
-
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const user = await getUser();
-  const protectedRoutes = ['/dashboard', '/profile', '/update-password'];
-
-  if (!user && protectedRoutes.includes(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  if (user && request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  return supabaseResponse;
-}`}
-        />
+        <div className="tip">
+          <span className="tip-icon">⚠️</span>
+          <span>
+            Usa <code>getAll</code>/<code>setAll</code> (API actual del SSR). Los
+            métodos viejos <code>get</code>/<code>set</code>/<code>remove</code>{" "}
+            están deprecados y causan bugs de sesión difíciles de depurar.
+          </span>
+        </div>
       </section>
     </>
   );

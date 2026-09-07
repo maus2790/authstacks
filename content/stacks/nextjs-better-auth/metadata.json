@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Better Auth",
   "slug": "nextjs-better-auth",
+  "category": "librerias",
   "description": "Una biblioteca de autenticación moderna, extensible y de código abierto. Alternativa ligera a NextAuth.js con soporte para múltiples bases de datos y plugins.",
   "difficulty": "Intermedio",
   "icon": "✨",
-  "tags": ["Next.js", "BetterAuth", "TypeScript", "Modern"]
+  "tags": ["Next.js", "BetterAuth", "TypeScript", "Modern"],
+  "summary": "Librería open source que corre en TU servidor y base de datos. Login/registro con formularios propios y sesiones en cookies.",
+  "pros": [
+    "Código abierto y activo: corre 100% en tu infraestructura",
+    "Sin vendor lock-in: tus usuarios y sesiones son tuyos",
+    "Plugins y adaptadores para muchas bases de datos"
+  ],
+  "cons": [
+    "Configuras tú la base de datos, el schema y las migraciones",
+    "Los formularios los construyes tú (no hay UI hosteada)",
+    "Tú eres responsable de la seguridad de la infraestructura"
+  ]
 }

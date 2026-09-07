@@ -1,8 +1,20 @@
 {
   "name": "Next.js + MongoDB",
   "slug": "nextjs-mongodb",
+  "category": "manual",
   "description": "Autenticación completa con MongoDB como base de datos, utilizando Mongoose ODM, sesiones JWT y cookies HTTP-only.",
   "difficulty": "Intermedio",
   "icon": "🍃",
-  "tags": ["Next.js", "MongoDB", "Mongoose", "JWT", "Tailwind"]
+  "tags": ["Next.js", "MongoDB", "Mongoose", "JWT", "Tailwind"],
+  "summary": "Implementación manual total: MongoDB guarda usuarios (bcrypt), la sesión es un JWT en cookie httpOnly y todo el código es tuyo.",
+  "pros": [
+    "Control absoluto sobre el modelo de usuario y la sesión",
+    "Sin dependencias externas de auth: JWT + bcrypt bastan",
+    "MongoDB Atlas gratis y fácil de escalar"
+  ],
+  "cons": [
+    "Tú implementas la seguridad: no hay red de seguridad de un proveedor",
+    "Escribes mucho a mano (validaciones, errores, sesiones)",
+    "Responsable de buenas prácticas (JWT, cookies, rate limiting)"
+  ]
 }

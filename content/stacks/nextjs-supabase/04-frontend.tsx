@@ -5,200 +5,211 @@ export default function Frontend() {
   return (
     <>
       <header className="content-header">
-        <h1 className="content-title">Componentes UI y Páginas</h1>
+        <h1 className="content-title">Páginas de Login y Registro</h1>
         <p className="content-subtitle">
-          Componentes reutilizables, layouts y formularios de autenticación
+          Formularios nativos + el callback de Supabase
         </p>
       </header>
 
       <section className="section-card">
         <h2 className="section-title">
-          <span className="section-icon">🧩</span>
-          1. Componentes UI (shadcn/ui)
+          <span className="section-icon">🌐</span>
+          1. El route handler de callback (<code>app/auth/callback/route.ts</code>) — archivo completo
         </h2>
         <p className="section-paragraph">
-          Asegúrate de tener los siguientes componentes en <code>components/ui/</code>:
-          <code>button.tsx</code>, <code>input.tsx</code>, <code>form.tsx</code>, <code>label.tsx</code>,
-          <code>avatar.tsx</code>, <code>badge.tsx</code>, <code>card.tsx</code>, <code>dialog.tsx</code>,
-          <code>skeleton.tsx</code>.
-        </p>
-        <p className="section-paragraph">
-          Modifica <code>components/ui/input.tsx</code> para soportar visibilidad de contraseña:
+          Supabase redirige aquí tras OAuth (Google), confirmación de email o
+          recuperación de contraseña. Intercambia el <code>code</code> por una
+          sesión. Crea <code>app/auth/callback/route.ts</code>:
         </p>
         <CodeBlock
-          code={`import * as React from "react"
-import { cn } from "@/lib/utils"
-import { Eye, EyeOff } from "lucide-react"
+          code={`import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+// Supabase redirige aquí tras OAuth (Google), confirmación de email,
+// recuperación de contraseña, etc. Intercambia el código por una sesión.
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/dashboard";
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    const [showPassword, setShowPassword] = React.useState(false)
-    const inputType = type === "password" && showPassword ? "text" : type
-
-    return (
-      <div className="relative">
-        <input
-          type={inputType}
-          className={cn(
-            "flex h-10 bg-background w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-purple-200 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-            type === "password" ? "pr-10" : "",
-            className
-          )}
-          ref={ref}
-          {...props}
-        />
-        {type === "password" && (
-          <button
-            type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        )}
-      </div>
-    )
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(\`\${origin}\${next}\`);
+    }
   }
-)
-Input.displayName = "Input"
-export { Input }`}
+
+  // Si llegó sin code (usuario canceló o error), volver al login
+  return NextResponse.redirect(\`\${origin}/login?error=auth\`);
+}`}
         />
-        <p className="section-paragraph">
-          También necesitas crear <code>components/ui/form.tsx</code> (proporcionado por shadcn/ui) y
-          asegurarte de que los componentes estén importados correctamente.
-        </p>
       </section>
 
       <section className="section-card">
         <h2 className="section-title">
           <span className="section-icon">📄</span>
-          2. Páginas de autenticación
+          2. Página de Login (<code>app/login/page.tsx</code>) — archivo completo
         </h2>
-
-        <h3 className="subsection-title">Layout de autenticación (<code>app/(auth)/layout.tsx</code>)</h3>
-        <CodeBlock
-          code={`export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10"></div>
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-      <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      {children}
-    </div>
-  );
-}`}
-        />
-
-        <h3 className="subsection-title">Página de Login (<code>app/(auth)/login/page.tsx</code>)</h3>
         <CodeBlock
           code={`"use client";
-import { useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "react-hot-toast";
-import { login } from "@/actions/auth/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Mail, Lock } from "lucide-react";
-
-const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(1, "La contraseña es requerida"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+import { useActionState } from "react";
+import { loginAction } from "@/actions/auth";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginForm) => {
-    setLoading(true);
-    const result = await login(data);
-    if (result.success) {
-      window.location.reload();
-    } else {
-      let errorMessage = result.message;
-      if (errorMessage?.includes("Invalid login credentials")) {
-        errorMessage = "Credenciales incorrectas. Verifica tu correo y contraseña.";
-      } else if (errorMessage?.includes("Email not confirmed")) {
-        errorMessage = "Debes confirmar tu correo electrónico. Revisa tu bandeja.";
-      }
-      setError("root", { message: errorMessage });
-      toast.error(errorMessage);
-      setLoading(false);
-    }
-  };
+  const [state, formAction, pending] = useActionState(loginAction, undefined);
 
   return (
-    <div className="glass p-8 rounded-2xl w-full max-w-md relative z-10">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Bienvenido</h1>
-        <p className="text-white/60 mt-2">Inicia sesión para continuar</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Iniciar sesión</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div>
-          <Label className="text-white/80">Correo electrónico</Label>
-          <Input
-            type="email"
-            placeholder="tu@email.com"
-            icon={<Mail size={18} />}
-            {...register("email")}
-            className="bg-white/10 border-white/20 text-white placeholder-white/50"
-          />
-          {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
-        </div>
+        <form action={formAction} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
 
-        <div>
-          <Label className="text-white/80">Contraseña</Label>
-          <Input
-            type="password"
-            placeholder="••••••••"
-            icon={<Lock size={18} />}
-            {...register("password")}
-            className="bg-white/10 border-white/20 text-white placeholder-white/50"
-          />
-          {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
-        </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
 
-        {errors.root && <p className="text-sm text-red-400">{errors.root.message}</p>}
+          {state?.error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {state.error}
+            </p>
+          )}
 
-        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600">
-          {loading ? "Cargando..." : "Iniciar sesión"}
-        </Button>
-      </form>
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {pending ? "Ingresando..." : "Ingresar"}
+          </button>
+        </form>
 
-      <div className="mt-6 text-center space-y-2">
-        <Link href="/forgot-password" className="text-sm text-white/60 hover:text-white transition">
-          ¿Olvidaste tu contraseña?
-        </Link>
-        <p className="text-white/60 text-sm">
-          ¿No tienes cuenta? <Link href="/register" className="text-cyan-300 hover:underline">Regístrate aquí</Link>
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿No tienes cuenta?{" "}
+          <a href="/register" className="text-blue-600 hover:underline">
+            Regístrate aquí
+          </a>
         </p>
       </div>
     </div>
   );
 }`}
         />
+      </section>
 
-        <p className="section-paragraph">
-          Las páginas de registro, recuperación y restablecimiento de contraseña son similares y se
-          pueden ver en el código completo del proyecto.
+      <section className="section-card">
+        <h2 className="section-title">
+          <span className="section-icon">📄</span>
+          3. Página de Registro (<code>app/register/page.tsx</code>) — archivo completo
+        </h2>
+        <CodeBlock
+          code={`"use client";
+import { useActionState } from "react";
+import { registerAction } from "@/actions/auth";
+
+export default function RegisterPage() {
+  const [state, formAction, pending] = useActionState(registerAction, undefined);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-black">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-white/10 dark:bg-white/5">
+        <h1 className="mb-6 text-3xl font-bold text-center">Crear cuenta</h1>
+
+        <form action={formAction} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="mb-1 block text-sm font-medium">
+              Nombre
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              placeholder="Tu nombre"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              Correo electrónico
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-white/10 dark:bg-white/5"
+            />
+          </div>
+
+          {state?.error && (
+            <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {state.error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {pending ? "Registrando..." : "Registrarse"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          ¿Ya tienes cuenta?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Inicia sesión
+          </a>
         </p>
+      </div>
+    </div>
+  );
+}`}
+        />
       </section>
     </>
   );

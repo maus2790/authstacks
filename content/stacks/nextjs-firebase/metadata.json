@@ -1,8 +1,20 @@
 {
   "name": "Next.js + Firebase",
   "slug": "nextjs-firebase",
+  "category": "baas",
   "description": "La plataforma completa de Google para desarrollar apps. Incluye autenticación, base de datos en tiempo real, almacenamiento y más, todo integrado con Next.js.",
   "difficulty": "Intermedio",
   "icon": "🔥",
-  "tags": ["Next.js", "Firebase", "Authentication", "Firestore", "Tailwind"]
+  "tags": ["Next.js", "Firebase", "Authentication", "Firestore", "Tailwind"],
+  "summary": "Plataforma de Google con dos SDKs: el web (login en el navegador) y el Admin (sesiones en el servidor con tu cuenta de servicio).",
+  "pros": [
+    "Ecosistema Google completo: Auth, Firestore, Storage, Functions",
+    "Flujo estándar con session cookies seguras (httpOnly)",
+    "Plan Spark gratis generoso para empezar"
+  ],
+  "cons": [
+    "Dos credenciales distintas (App Web + service account) confunden",
+    "Debes habilitar Authentication y Email/Password manualmente",
+    "Vendor lock-in fuerte con Google"
+  ]
 }
