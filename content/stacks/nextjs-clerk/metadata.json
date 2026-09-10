@@ -1,20 +1,20 @@
 {
   "name": "Next.js + Clerk",
   "slug": "nextjs-clerk",
-  "category": "baas",
+  "category": "idaas",
   "description": "La forma más rápida de añadir autenticación completa a Next.js. Incluye UI pre-construida, manejo de sesiones, MFA y más.",
   "difficulty": "Principiante",
   "icon": "👤",
-  "tags": ["Next.js", "Clerk", "Auth-as-Service", "Tailwind"],
-  "summary": "Auth como servicio con componentes React listos (SignIn, UserButton, perfil). El CLI inicializa todo en minutos.",
+  "tags": ["Next.js", "Clerk", "IDaaS", "React"],
+  "summary": "IDaaS moderna: SOLO identidad, con componentes React listos (SignIn, UserButton, perfil). El CLI inicializa todo en minutos.",
   "pros": [
     "Setup en minutos con el Clerk CLI (clerk init)",
     "Componentes pulidos y personalizables con apariencia propia",
     "Organizaciones y permisos (RBAC) integrados en el dashboard"
   ],
   "cons": [
+    "Solo identidad: base de datos y storage van por separado",
     "Plan Free con límite de usuarios activos (MAU)",
-    "Dependes de la nube de Clerk (vendor lock-in)",
-    "Menos control sobre el flujo interno de autenticación"
+    "Dependes de la nube de Clerk (vendor lock-in)"
   ]
 }

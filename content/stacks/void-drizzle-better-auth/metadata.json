@@ -2,19 +2,19 @@
   "name": "Void + Drizzle + Better Auth",
   "slug": "void-drizzle-better-auth",
   "category": "deploy",
-  "description": "El stack del futuro: infraestructura aprovisionada automáticamente. Void escanea tu código, crea la base de datos D1, configura Better Auth y despliega todo con un solo comando.",
+  "description": "Despliegue automático: Void escanea tu código, aprovisiona la infraestructura y publica con un comando en Vercel, Netlify o Cloudflare Pages.",
   "difficulty": "Intermedio",
   "icon": "🚀",
-  "tags": ["Void", "Drizzle", "Better Auth", "D1", "Full-Stack"],
-  "summary": "Despliegue automático: Void detecta tu stack, crea la infraestructura (D1, auth) y despliega la app con un comando.",
+  "tags": ["Void", "Drizzle", "Better Auth", "Vercel", "Cloudflare"],
+  "summary": "Stack con despliegue automático: detecta tu proyecto, configura Better Auth + base de datos y lo publica en Vercel, Netlify o Cloudflare Pages.",
   "pros": [
     "Infraestructura aprovisionada automáticamente (cero config)",
-    "Better Auth open source sobre Cloudflare D1",
-    "Ideal para prototipar y lanzar en minutos"
+    "Publica en Vercel, Netlify o Cloudflare Pages con un comando",
+    "Better Auth open source: la auth corre en tu propio backend"
   ],
   "cons": [
-    "Dependes de la plataforma Void para el despliegue",
-    "Auth y BD gestionadas por la plataforma (menos control)",
-    "Stack más nuevo: menos comunidad y documentación"
+    "Dependes de la plataforma Void para el flujo de despliegue",
+    "Stack joven: menos comunidad y documentación que los demás",
+    "Menos control fino sobre la infraestructura generada"
   ]
 }

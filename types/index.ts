@@ -1,8 +1,9 @@
 export type StackCategory =
-  | "baas" // 📦 Soluciones Todo-en-Uno (BaaS)
-  | "librerias" // 🧩 Librerías flexibles
-  | "manual" // 🛠️ Control total (implementación manual)
-  | "deploy"; // 🚀 Stacks con despliegue automático
+  | "idaas" // 🔐 IDaaS (Identity as a Service) — solo identidad, gestionada
+  | "baas" // ☁️ BaaS (Backend as a Service) — backend completo gestionado
+  | "dbaas" // 🗄️ DBaaS (Database as a Service) — solo base de datos gestionada
+  | "librerias" // 🧩 Librerías (self-hosted) — corre en tu servidor
+  | "deploy"; // 🚀 Despliegue automático
 
 export interface StackMetadata {
   name: string;

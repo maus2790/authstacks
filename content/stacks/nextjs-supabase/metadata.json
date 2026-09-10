@@ -2,19 +2,19 @@
   "name": "Next.js + Supabase",
   "slug": "nextjs-supabase",
   "category": "baas",
-  "description": "Auth completa con Backend as a Service (BaaS): sesiones con cookies automáticas, Auth y PostgreSQL listos para usar. Sin shadcn/ui.",
+  "description": "Backend as a Service (BaaS) sobre PostgreSQL: Auth, base de datos SQL, storage y funciones en un solo servicio. Sin shadcn/ui.",
   "difficulty": "Principiante",
   "icon": "🟢",
   "tags": ["Next.js", "Supabase", "PostgreSQL", "BaaS"],
-  "summary": "Backend completo open source (Auth + PostgreSQL): @supabase/ssr maneja las sesiones en cookies automáticamente.",
+  "summary": "BaaS open source construido sobre PostgreSQL (SQL relacional): Auth + base de datos + storage. El SDK @supabase/ssr maneja las sesiones en cookies.",
   "pros": [
-    "Auth + base de datos PostgreSQL en un solo servicio",
-    "Sesiones con cookies gestionadas por el SDK (@supabase/ssr)",
-    "Open source: puedes self-hostear si lo necesitas"
+    "PostgreSQL real: SQL, relaciones, joins y transacciones",
+    "Auth, base de datos, storage y funciones en un solo servicio",
+    "Open source: puedes self-hostear si quieres dejar el cloud"
   ],
   "cons": [
-    "La base de datos viene incluida, no es opcional",
+    "La base de datos viene incluida: no puedes usar la tuya",
     "Reglas RLS (Row Level Security) requieren aprendizaje",
-    "Dependencia de un servicio externo para auth y datos"
+    "Proyectos Free se pausan tras días sin actividad"
   ]
 }

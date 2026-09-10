@@ -1,20 +1,20 @@
 {
   "name": "Next.js + MongoDB",
   "slug": "nextjs-mongodb",
-  "category": "manual",
-  "description": "Autenticación completa con MongoDB como base de datos, utilizando Mongoose ODM, sesiones JWT y cookies HTTP-only.",
+  "category": "dbaas",
+  "description": "MongoDB Atlas (DBaaS) + auth propio: Mongoose ODM, hash con bcrypt y sesiones JWT en cookies HTTP-only.",
   "difficulty": "Intermedio",
   "icon": "🍃",
-  "tags": ["Next.js", "MongoDB", "Mongoose", "JWT", "Tailwind"],
-  "summary": "Implementación manual total: MongoDB guarda usuarios (bcrypt), la sesión es un JWT en cookie httpOnly y todo el código es tuyo.",
+  "tags": ["Next.js", "MongoDB", "Atlas", "DBaaS", "JWT"],
+  "summary": "DBaaS NoSQL (MongoDB Atlas): solo la base de datos gestionada. Tú construyes el backend y el auth a mano (bcrypt + JWT).",
   "pros": [
-    "Control absoluto sobre el modelo de usuario y la sesión",
-    "Sin dependencias externas de auth: JWT + bcrypt bastan",
-    "MongoDB Atlas gratis y fácil de escalar"
+    "MongoDB: la base NoSQL de documentos más usada del mundo",
+    "Atlas gestiona servidores, backups y escalado por ti",
+    "Control absoluto del modelo de usuario y de la sesión"
   ],
   "cons": [
-    "Tú implementas la seguridad: no hay red de seguridad de un proveedor",
-    "Escribes mucho a mano (validaciones, errores, sesiones)",
-    "Responsable de buenas prácticas (JWT, cookies, rate limiting)"
+    "No trae auth: tú implementas hash, sesiones y validaciones",
+    "Sin seguridad de un proveedor de identidad que te cubra",
+    "Atlas Free limitado (512 MB) y requiere whitelist de IPs"
   ]
 }
